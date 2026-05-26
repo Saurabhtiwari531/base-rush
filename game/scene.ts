@@ -8,6 +8,10 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
     width: 480,
     height: 640,
     parent,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
     physics: {
       default: 'arcade',
       arcade: { gravity: { x: 0, y: 1500 }, debug: false }
@@ -22,6 +26,12 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         try {
           this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+          // iOS Safari starts AudioContext in suspended state — resume on first tap
+          if (this.audioCtx.state === 'suspended') {
+            this.input.once('pointerdown', () => {
+              this.audioCtx?.resume().catch(() => {})
+            })
+          }
         } catch (e) {
           this.audioCtx = null
         }

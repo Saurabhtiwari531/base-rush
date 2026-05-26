@@ -63,15 +63,18 @@ export function createPowerUps(scene: any) {
   scene.activateSlowMo = () => {
     if (scene.activeSlowMo) return
     scene.activeSlowMo = true
-    scene.savedSpeed = scene.obstacleSpeed
-    scene.obstacleSpeed = scene.obstacleSpeed * 0.58
+    const speedAtActivation = scene.obstacleSpeed
+    scene.obstacleSpeed = speedAtActivation * 0.58
     scene.obstacles.getChildren().forEach((o: any) => { o.setVelocityX(-scene.obstacleSpeed) })
     scene.coins.getChildren().forEach((c: any) => { c.setVelocityX(-scene.obstacleSpeed) })
     scene.powerups.getChildren().forEach((p: any) => { p.setVelocityX(-scene.obstacleSpeed) })
     scene.slowMoOverlay = scene.add.rectangle(240, 320, 480, 640, 0x6600FF, 0.08).setDepth(50)
+    // After 5s, restore to current speed (which has been naturally increasing during slow-mo)
+    // rather than the frozen pre-slowmo value to avoid jarring speed jump
     scene.time.delayedCall(5000, () => {
       scene.activeSlowMo = false
-      scene.obstacleSpeed = scene.savedSpeed
+      // Speed has been drifting up during slow-mo; normalise back to the ratio it should be
+      scene.obstacleSpeed = Math.min(scene.maxSpeed, scene.obstacleSpeed / 0.58)
       if (scene.slowMoOverlay) {
         scene.slowMoOverlay.destroy()
         scene.slowMoOverlay = null

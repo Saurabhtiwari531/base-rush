@@ -21,10 +21,10 @@ export default function Home() {
     address, isConnected, disconnect,
     hash, isPending, isConfirming,
     canReplay, txPending, txError,
-    finalScore, showWalletPrompt, setShowWalletPrompt,
+    finalScore, connectors,
     submitScoreToChain, handlePlayAgain,
     handleRetryTransaction,
-    connectCoinbase, connectMetaMask, connectInjected,
+    connectWallet,
   } = useScoreSubmission()
 
   const { leaderboard, refetch, isLoading: leaderboardLoading } = useLeaderboard()
@@ -88,8 +88,12 @@ export default function Home() {
   if (!mounted) return null
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-black">
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <main style={{ background: '#000', minHeight: '100dvh', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        * { box-sizing: border-box; }
+        canvas { display: block; }
+      `}</style>
 
       <TopBar
         isConnected={isConnected}
@@ -103,10 +107,22 @@ export default function Home() {
       />
 
       {!gameStarted ? (
-        <StartScreen onStart={() => setGameStarted(true)} />
+        <StartScreen
+          onStart={() => setGameStarted(true)}
+          isConnected={isConnected}
+          address={address}
+          onConnect={connectWallet}
+        />
       ) : (
-        <div style={{ position: 'relative' }}>
-          <div ref={gameRef} style={{ marginTop: '44px' }} />
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: '#000', overflow: 'hidden'
+        }}>
+          {/* Phaser mounts here — full area below TopBar */}
+          <div
+            ref={gameRef}
+            style={{ position: 'absolute', top: '44px', left: 0, right: 0, bottom: 0 }}
+          />
 
           {gameLoading && (
             <div style={{
@@ -132,17 +148,14 @@ export default function Home() {
             <GameOver
               finalScore={finalScore}
               isConnected={isConnected}
-              showWalletPrompt={showWalletPrompt}
-              setShowWalletPrompt={setShowWalletPrompt}
               txPending={txPending}
               isConfirming={isConfirming}
               isPending={isPending}
               txError={txError}
               canReplay={canReplay}
               hash={hash}
-              connectCoinbase={connectCoinbase}
-              connectMetaMask={connectMetaMask}
-              connectInjected={connectInjected}
+              connectors={connectors}
+              connectWallet={connectWallet}
               submitScoreToChain={submitScoreToChain}
               handleRetryTransaction={handleRetryTransaction}
               onPlayAgain={onPlayAgain}

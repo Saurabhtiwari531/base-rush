@@ -2,60 +2,215 @@
 
 type Props = {
   onStart: () => void
+  isConnected: boolean
+  address: string | undefined
+  onConnect: () => void
 }
 
-export function StartScreen({ onStart }: Props) {
+export function StartScreen({ onStart, isConnected, address, onConnect }: Props) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      gap: '20px', padding: '40px',
-      background: 'rgba(0,0,30,0.95)',
-      border: '2px solid #0044FF', borderRadius: '16px',
-      maxWidth: '400px', width: '90%', textAlign: 'center'
+      minHeight: '100vh', width: '100%',
+      background: 'radial-gradient(ellipse at top, #0a0a2e 0%, #000000 60%)',
+      padding: '20px',
+      fontFamily: '"Courier New", monospace',
+      position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ fontSize: '48px' }}>⚡</div>
-      <div>
+      {/* Animated stars background */}
+      <div style={{
+        position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none'
+      }}>
+        {[...Array(30)].map((_, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            width: i % 3 === 0 ? '3px' : '2px',
+            height: i % 3 === 0 ? '3px' : '2px',
+            background: i % 4 === 0 ? '#0052FF' : '#ffffff',
+            borderRadius: '50%',
+            top: `${(i * 37 + 5) % 100}%`,
+            left: `${(i * 53 + 7) % 100}%`,
+            opacity: 0.4 + (i % 5) * 0.1,
+          }} />
+        ))}
+      </div>
+
+      {/* PRIZE BANNER */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1a0a00 0%, #2a1000 100%)',
+        border: '2px solid #FFD700',
+        borderRadius: '12px',
+        padding: '10px 24px',
+        marginBottom: '20px',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        boxShadow: '0 0 20px rgba(255,215,0,0.3)',
+      }}>
+        <span style={{ fontSize: '22px' }}>🏆</span>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ color: '#FFD700', fontWeight: 'bold', fontSize: '12px', letterSpacing: '2px' }}>
+            WEEKLY PRIZE POOL
+          </div>
+          <div style={{ color: '#FFA500', fontSize: '11px' }}>
+            🥇 $5 &nbsp;•&nbsp; 🥈 $3 &nbsp;•&nbsp; 🥉 $1
+          </div>
+        </div>
+        <span style={{ fontSize: '22px' }}>🏆</span>
+      </div>
+
+      {/* GAME LOGO CARD */}
+      <div style={{
+        background: 'linear-gradient(180deg, rgba(0,10,40,0.95) 0%, rgba(0,5,20,0.98) 100%)',
+        border: '2px solid #0052FF',
+        borderRadius: '20px',
+        padding: '28px 24px',
+        maxWidth: '360px', width: '100%',
+        textAlign: 'center',
+        boxShadow: '0 0 40px rgba(0,82,255,0.25), inset 0 1px 0 rgba(0,82,255,0.2)',
+        position: 'relative',
+      }}>
+        {/* PLAY TO EARN badge */}
+        <div style={{
+          position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)',
+          background: 'linear-gradient(135deg, #00C853 0%, #00E676 100%)',
+          color: '#000000', fontWeight: 'bold', fontSize: '10px',
+          padding: '4px 16px', borderRadius: '20px', letterSpacing: '2px',
+          whiteSpace: 'nowrap',
+        }}>
+          ⚡ PLAY TO EARN
+        </div>
+
+        {/* Game character art */}
+        <div style={{
+          fontSize: '64px', margin: '8px 0 4px',
+          filter: 'drop-shadow(0 0 12px rgba(0,82,255,0.6))',
+          lineHeight: 1,
+        }}>
+          🏃
+        </div>
+
+        {/* Title */}
         <h1 style={{
-          color: '#FFFFFF', fontSize: '28px', fontWeight: 'bold',
-          margin: '0 0 8px 0', letterSpacing: '4px'
+          color: '#FFFFFF', fontSize: '36px', fontWeight: 'bold',
+          margin: '8px 0 4px', letterSpacing: '6px',
+          textShadow: '0 0 20px rgba(0,82,255,0.8), 0 0 40px rgba(0,82,255,0.4)',
         }}>
           BASE RUSH
         </h1>
-        <p style={{ color: '#6688AA', fontSize: '13px', margin: 0 }}>
-          Dodge obstacles, collect coins, use power-ups!
-        </p>
-      </div>
-
-      <div style={{
-        background: 'rgba(0,68,255,0.1)', border: '1px solid #0044FF',
-        borderRadius: '10px', padding: '14px 18px',
-        textAlign: 'left', width: '100%'
-      }}>
-        <p style={{ color: '#00CCFF', fontSize: '12px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
-          HOW TO PLAY
-        </p>
-        <p style={{ color: '#AACCFF', fontSize: '11px', margin: '4px 0' }}>🎮 Jump = SPACE / UP / Tap</p>
-        <p style={{ color: '#AACCFF', fontSize: '11px', margin: '4px 0' }}>🦆 Slide = DOWN / Swipe down</p>
-        <p style={{ color: '#AACCFF', fontSize: '11px', margin: '4px 0' }}>🔥 Combo = Collect coins without missing</p>
-        <p style={{ color: '#AACCFF', fontSize: '11px', margin: '4px 0' }}>🎁 Power-ups = Shield, Magnet, Slow-mo, 2x</p>
-      </div>
-
-      <button
-        onClick={onStart}
-        style={{
-          background: 'linear-gradient(135deg, #0052FF 0%, #0088FF 100%)',
-          border: 'none', color: '#FFFFFF',
-          padding: '18px 40px', borderRadius: '12px',
-          cursor: 'pointer', fontSize: '18px', fontWeight: 'bold',
-          width: '100%', boxShadow: '0 4px 20px rgba(0,82,255,0.4)'
+        <p style={{
+          color: '#0088FF', fontSize: '11px', letterSpacing: '3px',
+          margin: '0 0 20px',
         }}>
-        ▶️ PLAY NOW
-      </button>
+          ON-CHAIN RUNNER · BASE NETWORK
+        </p>
 
-      <p style={{ color: '#445566', fontSize: '10px', margin: 0 }}>
-        No wallet needed • Connect later to save scores
-      </p>
+        {/* Stats row */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+          gap: '8px', marginBottom: '20px',
+        }}>
+          {[
+            { icon: '🪙', label: 'Coins', val: 'Collect' },
+            { icon: '🛡️', label: 'Power-ups', val: '4 Types' },
+            { icon: '⛓️', label: 'On-chain', val: 'Scores' },
+          ].map(s => (
+            <div key={s.label} style={{
+              background: 'rgba(0,82,255,0.1)',
+              border: '1px solid rgba(0,82,255,0.3)',
+              borderRadius: '10px', padding: '10px 6px',
+            }}>
+              <div style={{ fontSize: '20px' }}>{s.icon}</div>
+              <div style={{ color: '#00AAFF', fontSize: '10px', fontWeight: 'bold', marginTop: '4px' }}>
+                {s.val}
+              </div>
+              <div style={{ color: '#556677', fontSize: '9px' }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Controls */}
+        <div style={{
+          background: 'rgba(0,0,0,0.4)',
+          border: '1px solid rgba(0,82,255,0.2)',
+          borderRadius: '10px', padding: '12px',
+          marginBottom: '20px', textAlign: 'left',
+        }}>
+          <div style={{ color: '#0088FF', fontSize: '10px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>
+            HOW TO PLAY
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+            {[
+              { key: 'SPACE / ↑ / Tap', action: 'Jump' },
+              { key: 'DOWN / Swipe ↓', action: 'Slide' },
+              { key: '🔥 Combo', action: 'Chain coins' },
+              { key: '🎁 Drops', action: 'Power-ups' },
+            ].map(c => (
+              <div key={c.action} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{
+                  background: 'rgba(0,82,255,0.2)', color: '#AACCFF',
+                  fontSize: '9px', padding: '2px 5px', borderRadius: '4px',
+                  border: '1px solid rgba(0,82,255,0.3)', whiteSpace: 'nowrap',
+                }}>
+                  {c.key}
+                </span>
+                <span style={{ color: '#667788', fontSize: '9px' }}>{c.action}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* PLAY button */}
+        <button
+          onClick={onStart}
+          style={{
+            background: 'linear-gradient(135deg, #0052FF 0%, #0088FF 100%)',
+            border: 'none', color: '#FFFFFF',
+            padding: '18px 40px', borderRadius: '14px',
+            cursor: 'pointer', fontSize: '20px', fontWeight: 'bold',
+            width: '100%',
+            boxShadow: '0 4px 24px rgba(0,82,255,0.5), 0 0 0 1px rgba(0,136,255,0.3)',
+            letterSpacing: '3px',
+            transition: 'transform 0.1s',
+          }}
+          onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.97)')}
+          onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
+        >
+          ▶ PLAY NOW
+        </button>
+
+        {/* Wallet status */}
+        <div style={{ marginTop: '14px' }}>
+          {isConnected ? (
+            <div style={{
+              background: 'rgba(0,200,80,0.1)', border: '1px solid rgba(0,200,80,0.3)',
+              borderRadius: '8px', padding: '8px 12px',
+              color: '#00C853', fontSize: '11px', fontWeight: 'bold',
+            }}>
+              ✅ {address?.slice(0, 6)}...{address?.slice(-4)} · Ready to earn!
+            </div>
+          ) : (
+            <button
+              onClick={onConnect}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(0,82,255,0.5)',
+                color: '#4488FF', fontSize: '11px',
+                padding: '8px 16px', borderRadius: '8px',
+                cursor: 'pointer', width: '100%',
+              }}
+            >
+              🔵 Connect Wallet to Save Score
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Base branding */}
+      <div style={{
+        marginTop: '16px', color: '#223344', fontSize: '10px', letterSpacing: '1px',
+      }}>
+        Powered by Base Network · Scores stored on-chain
+      </div>
     </div>
   )
 }

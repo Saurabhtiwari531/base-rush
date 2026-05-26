@@ -34,8 +34,6 @@ export function useLeaderboard() {
       { rank: 3, address: third, score: Number(score3) },
     ]
 
-    // De-duplicate: agar same player 2 slots mein hai (improved score ne purana slot nahi hata),
-    // to sirf pehli (highest) entry rakho, duplicate ko empty dikha
     const seen = new Set<string>()
     return raw.map(e => {
       const addr = e.address.toLowerCase()
@@ -51,7 +49,7 @@ export function useLeaderboard() {
 
 export function useScoreSubmission() {
   const { address, isConnected, chainId } = useConnection()
-  const { mutate: connectWallet } = useConnect()
+  const { mutate: connectWagmi } = useConnect()
   const connectors = useConnectors()
   const { mutate: disconnectWallet } = useDisconnect()
   const { mutateAsync: switchChainAsync } = useSwitchChain()
@@ -63,7 +61,6 @@ export function useScoreSubmission() {
   const [txError, setTxError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
-  const [showWalletPrompt, setShowWalletPrompt] = useState(false)
 
   useEffect(() => {
     if (isConfirmed && !canReplay) {
@@ -97,7 +94,6 @@ export function useScoreSubmission() {
 
     if (!isConnected) {
       setFinalScore(score)
-      setShowWalletPrompt(true)
       return
     }
 
@@ -146,7 +142,6 @@ export function useScoreSubmission() {
     setCanReplay(false)
     setTxPending(false)
     setTxError('')
-    setShowWalletPrompt(false)
     setIsSubmitting(false)
     setFinalScore(0)
     setIsGameOver(false)
@@ -162,30 +157,13 @@ export function useScoreSubmission() {
   }
 
   const handleRetryTransaction = () => {
-    if (!isConnected) {
-      setShowWalletPrompt(true)
-      return
-    }
     setTxError('')
     submitScoreToChain(finalScore)
   }
 
-  const connectCoinbase = () => {
-    const c = connectors.find(c => c.id === 'coinbaseWalletSDK') ?? connectors[0]
-    if (c) connectWallet({ connector: c })
-    setShowWalletPrompt(false)
-  }
-
-  const connectMetaMask = () => {
-    const c = connectors.find(c => c.id === 'metaMask' || c.id === 'io.metamask') ?? connectors[1]
-    if (c) connectWallet({ connector: c })
-    setShowWalletPrompt(false)
-  }
-
-  const connectInjected = () => {
-    const c = connectors.find(c => c.id === 'injected') ?? connectors[2]
-    if (c) connectWallet({ connector: c })
-    setShowWalletPrompt(false)
+  const connectWallet = (connector?: any) => {
+    const c = connector ?? connectors[0]
+    if (c) connectWagmi({ connector: c })
   }
 
   const disconnect = () => disconnectWallet({})
@@ -201,13 +179,10 @@ export function useScoreSubmission() {
     txPending,
     txError,
     finalScore,
-    showWalletPrompt,
-    setShowWalletPrompt,
+    connectors,
     submitScoreToChain,
     handlePlayAgain,
     handleRetryTransaction,
-    connectCoinbase,
-    connectMetaMask,
-    connectInjected,
+    connectWallet,
   }
 }
