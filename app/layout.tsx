@@ -5,6 +5,17 @@ import { Providers } from './providers'
 export const metadata: Metadata = {
   title: "Base Rush",
   description: "Web3 Runner Game on Base",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+    shortcut: "/icon-192.png",
+  },
+  openGraph: {
+    title: "Base Rush",
+    description: "Web3 Endless Runner Game on Base",
+    images: [{ url: "/base-rush-icon.png", width: 512, height: 512 }],
+  },
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {

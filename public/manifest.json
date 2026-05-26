@@ -1,0 +1,23 @@
+{
+  "name": "Base Rush",
+  "short_name": "Base Rush",
+  "description": "Web3 Endless Runner Game on Base",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050E2C",
+  "theme_color": "#0052FF",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
