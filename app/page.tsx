@@ -1,65 +1,156 @@
-import Image from "next/image";
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { useScoreSubmission, useLeaderboard } from '../hooks/useScoreSubmission'
+import { TopBar } from '../components/TopBar'
+import { StartScreen } from '../components/StartScreen'
+import { GameOver } from '../components/GameOver'
+import { createGameConfig } from '../game/scene'
+
 
 export default function Home() {
+  const gameRef = useRef<HTMLDivElement>(null)
+  const gameInstanceRef = useRef<any>(null)
+  const [mounted, setMounted] = useState(false)
+  const [gameStarted, setGameStarted] = useState(false)
+  const [gameLoading, setGameLoading] = useState(false)
+  const [isGameOver, setIsGameOver] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
+
+  const {
+    address, isConnected, disconnect,
+    hash, isPending, isConfirming,
+    canReplay, txPending, txError,
+    finalScore, showWalletPrompt, setShowWalletPrompt,
+    submitScoreToChain, handlePlayAgain,
+    handleRetryTransaction,
+    connectCoinbase, connectMetaMask, connectInjected,
+  } = useScoreSubmission()
+
+  const { leaderboard, refetch, isLoading: leaderboardLoading } = useLeaderboard()
+
+  useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    if (canReplay) refetch()
+  }, [canReplay, refetch])
+
+  // Phaser game init
+  useEffect(() => {
+    if (!gameStarted) return
+    setGameLoading(true)
+    let game: any
+
+    const initGame = async () => {
+      const Phaser = (await import('phaser')).default
+      const config = createGameConfig(Phaser, gameRef.current)
+      game = new Phaser.Game(config)
+      gameInstanceRef.current = game
+    }
+
+    initGame()
+
+    return () => {
+      if (game) {
+        try {
+          const scene = game.scene.scenes[0]
+          if (scene?.audioCtx) scene.audioCtx.close()
+        } catch (e) {}
+        game.destroy(true)
+        gameInstanceRef.current = null
+      }
+    }
+  }, [gameStarted])
+
+  // React ↔ Phaser bridge
+  useEffect(() => {
+    ;(window as any).handleGameOver = (score: number) => {
+      setIsGameOver(true)
+      setTimeout(() => { submitScoreToChain(score) }, 100)
+    }
+    ;(window as any).gameReady = () => { setGameLoading(false) }
+    return () => {
+      delete (window as any).handleGameOver
+      delete (window as any).gameReady
+    }
+  }, [isConnected, submitScoreToChain])
+
+  const onPlayAgain = () => {
+    handlePlayAgain(gameInstanceRef, setGameStarted, setIsGameOver, setShowLeaderboard)
+  }
+
+  const onSkipAndReplay = () => {
+    setIsGameOver(false)
+    setGameStarted(false)
+    setTimeout(() => setGameStarted(true), 100)
+  }
+
+  if (!mounted) return null
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <main className="flex min-h-screen items-center justify-center bg-black">
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      <TopBar
+        isConnected={isConnected}
+        address={address}
+        disconnect={disconnect}
+        showLeaderboard={showLeaderboard}
+        setShowLeaderboard={setShowLeaderboard}
+        refetch={refetch}
+        leaderboard={leaderboard}
+        leaderboardLoading={leaderboardLoading}
+      />
+
+      {!gameStarted ? (
+        <StartScreen onStart={() => setGameStarted(true)} />
+      ) : (
+        <div style={{ position: 'relative' }}>
+          <div ref={gameRef} style={{ marginTop: '44px' }} />
+
+          {gameLoading && (
+            <div style={{
+              position: 'absolute', top: '44px', left: 0, right: 0, bottom: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#000000', zIndex: 300
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: '50px', height: '50px',
+                  border: '4px solid #0044FF', borderTopColor: '#FFFFFF',
+                  borderRadius: '50%', margin: '0 auto 20px',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <p style={{ color: '#FFFFFF', fontSize: '14px', letterSpacing: '2px' }}>
+                  LOADING GAME...
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isGameOver && (
+            <GameOver
+              finalScore={finalScore}
+              isConnected={isConnected}
+              showWalletPrompt={showWalletPrompt}
+              setShowWalletPrompt={setShowWalletPrompt}
+              txPending={txPending}
+              isConfirming={isConfirming}
+              isPending={isPending}
+              txError={txError}
+              canReplay={canReplay}
+              hash={hash}
+              connectCoinbase={connectCoinbase}
+              connectMetaMask={connectMetaMask}
+              connectInjected={connectInjected}
+              submitScoreToChain={submitScoreToChain}
+              handleRetryTransaction={handleRetryTransaction}
+              onPlayAgain={onPlayAgain}
+              onSkipAndReplay={onSkipAndReplay}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          )}
         </div>
-      </main>
-    </div>
-  );
+      )}
+    </main>
+  )
 }

@@ -1,0 +1,213 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import type { RefObject } from 'react'
+import { useConnection, useConnect, useConnectors, useDisconnect, useSwitchChain } from 'wagmi'
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { baseSepolia } from 'wagmi/chains'
+import { CONTRACT_ADDRESS, CONTRACT_ABI, LeaderboardEntry } from '../lib/contract'
+
+export function useLeaderboard() {
+  const { data, refetch, isLoading } = useReadContract({
+    address: CONTRACT_ADDRESS as `0x${string}`,
+    abi: CONTRACT_ABI,
+    functionName: 'getTop3',
+    query: { refetchInterval: 60000 },
+  })
+
+  const leaderboard = useMemo<LeaderboardEntry[]>(() => {
+    const rewards = ['$5', '$3', '$1']
+    const empty = (rank: number): LeaderboardEntry =>
+      ({ rank, address: '', score: 0, reward: rewards[rank - 1] })
+
+    if (!data) return [empty(1), empty(2), empty(3)]
+
+    const [first, score1, second, score2, third, score3] = data as [
+      `0x${string}`, bigint,
+      `0x${string}`, bigint,
+      `0x${string}`, bigint
+    ]
+    const zero = '0x0000000000000000000000000000000000000000'
+    const raw = [
+      { rank: 1, address: first, score: Number(score1) },
+      { rank: 2, address: second, score: Number(score2) },
+      { rank: 3, address: third, score: Number(score3) },
+    ]
+
+    // De-duplicate: agar same player 2 slots mein hai (improved score ne purana slot nahi hata),
+    // to sirf pehli (highest) entry rakho, duplicate ko empty dikha
+    const seen = new Set<string>()
+    return raw.map(e => {
+      const addr = e.address.toLowerCase()
+      const isEmpty = addr === zero || e.score === 0
+      if (isEmpty || seen.has(addr)) return empty(e.rank)
+      seen.add(addr)
+      return { ...e, reward: rewards[e.rank - 1] }
+    })
+  }, [data])
+
+  return { leaderboard, refetch, isLoading }
+}
+
+export function useScoreSubmission() {
+  const { address, isConnected, chainId } = useConnection()
+  const { mutate: connectWallet } = useConnect()
+  const connectors = useConnectors()
+  const { mutate: disconnectWallet } = useDisconnect()
+  const { mutateAsync: switchChainAsync } = useSwitchChain()
+  const { data: hash, mutate: writeContract, isPending, isError } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash })
+
+  const [canReplay, setCanReplay] = useState(false)
+  const [txPending, setTxPending] = useState(false)
+  const [txError, setTxError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [finalScore, setFinalScore] = useState(0)
+  const [showWalletPrompt, setShowWalletPrompt] = useState(false)
+
+  useEffect(() => {
+    if (isConfirmed && !canReplay) {
+      setCanReplay(true)
+      setTxPending(false)
+      setTxError('')
+      setIsSubmitting(false)
+    }
+  }, [isConfirmed, canReplay])
+
+  useEffect(() => {
+    if (isError) {
+      setTxPending(false)
+      setCanReplay(false)
+      setIsSubmitting(false)
+      setTxError('Transaction cancelled or failed. Please try again.')
+    }
+  }, [isError])
+
+  useEffect(() => {
+    if (!isConnected && txPending) {
+      setTxPending(false)
+      setCanReplay(false)
+      setIsSubmitting(false)
+      setTxError('Wallet disconnected. Please reconnect to continue.')
+    }
+  }, [isConnected, txPending])
+
+  const submitScoreToChain = async (score: number) => {
+    if (isSubmitting) return
+
+    if (!isConnected) {
+      setFinalScore(score)
+      setShowWalletPrompt(true)
+      return
+    }
+
+    if (score <= 0) {
+      setTxError('Score too low to submit')
+      return
+    }
+
+    if (chainId !== baseSepolia.id) {
+      try {
+        await switchChainAsync({ chainId: baseSepolia.id })
+      } catch {
+        setTxError('Please switch to Base Sepolia network to submit score.')
+        return
+      }
+    }
+
+    setIsSubmitting(true)
+    setTxPending(true)
+    setTxError('')
+    setCanReplay(false)
+    setFinalScore(score)
+
+    try {
+      writeContract({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CONTRACT_ABI,
+        functionName: 'submitScore',
+        args: [BigInt(Math.floor(score))],
+      })
+    } catch {
+      setTxPending(false)
+      setIsSubmitting(false)
+      setTxError('Failed to submit transaction')
+    }
+  }
+
+  const handlePlayAgain = (
+    gameInstanceRef: RefObject<any>,
+    setGameStarted: (v: boolean) => void,
+    setIsGameOver: (v: boolean) => void,
+    setShowLeaderboard: (v: boolean) => void
+  ) => {
+    if (!canReplay) return
+
+    setCanReplay(false)
+    setTxPending(false)
+    setTxError('')
+    setShowWalletPrompt(false)
+    setIsSubmitting(false)
+    setFinalScore(0)
+    setIsGameOver(false)
+    setShowLeaderboard(false)
+
+    if (gameInstanceRef.current) {
+      gameInstanceRef.current.destroy(true)
+      gameInstanceRef.current = null
+    }
+
+    setGameStarted(false)
+    setTimeout(() => setGameStarted(true), 100)
+  }
+
+  const handleRetryTransaction = () => {
+    if (!isConnected) {
+      setShowWalletPrompt(true)
+      return
+    }
+    setTxError('')
+    submitScoreToChain(finalScore)
+  }
+
+  const connectCoinbase = () => {
+    const c = connectors.find(c => c.id === 'coinbaseWalletSDK') ?? connectors[0]
+    if (c) connectWallet({ connector: c })
+    setShowWalletPrompt(false)
+  }
+
+  const connectMetaMask = () => {
+    const c = connectors.find(c => c.id === 'metaMask' || c.id === 'io.metamask') ?? connectors[1]
+    if (c) connectWallet({ connector: c })
+    setShowWalletPrompt(false)
+  }
+
+  const connectInjected = () => {
+    const c = connectors.find(c => c.id === 'injected') ?? connectors[2]
+    if (c) connectWallet({ connector: c })
+    setShowWalletPrompt(false)
+  }
+
+  const disconnect = () => disconnectWallet({})
+
+  return {
+    address,
+    isConnected,
+    disconnect,
+    hash,
+    isPending,
+    isConfirming,
+    canReplay,
+    txPending,
+    txError,
+    finalScore,
+    showWalletPrompt,
+    setShowWalletPrompt,
+    submitScoreToChain,
+    handlePlayAgain,
+    handleRetryTransaction,
+    connectCoinbase,
+    connectMetaMask,
+    connectInjected,
+  }
+}
