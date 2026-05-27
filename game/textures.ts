@@ -1,48 +1,108 @@
 export function createTextures(scene: any) {
-  // Background
+  // ── BACKGROUND ────────────────────────────────────────────────
+  // Four-band gradient: deep black-navy at top → slightly lighter navy near ground
   const bg = scene.make.graphics({ x: 0, y: 0, add: false })
   const colors = [
-    { y: 0, height: 160, color: 0x000428, alpha: 1.0 },
-    { y: 160, height: 160, color: 0x001233, alpha: 1.0 },
-    { y: 320, height: 160, color: 0x001d3d, alpha: 1.0 },
-    { y: 480, height: 160, color: 0x003566, alpha: 1.0 }
+    { y: 0,   height: 160, color: 0x000210 },
+    { y: 160, height: 160, color: 0x000722 },
+    { y: 320, height: 160, color: 0x000f2c },
+    { y: 480, height: 160, color: 0x001538 },
   ]
   colors.forEach(layer => {
-    bg.fillStyle(layer.color, layer.alpha)
+    bg.fillStyle(layer.color, 1)
     bg.fillRect(0, layer.y, 480, layer.height)
   })
-  bg.lineStyle(1, 0x0055AA, 0.08)
-  for (let y = 0; y < 640; y += 40) {
-    bg.lineBetween(0, y, 480, y)
-  }
+  // Barely-visible horizontal scan grid (depth-of-field feel)
+  bg.lineStyle(0.5, 0x0033AA, 0.06)
+  for (let y = 0; y < 640; y += 40) bg.lineBetween(0, y, 480, y)
   bg.generateTexture('bg', 480, 640)
   bg.destroy()
 
-  // Ground
+  // ── PHYSICS GROUND (minimal — visual floor is handled by groundGrid tileSprite) ──
   const gfx = scene.make.graphics({ x: 0, y: 0, add: false })
-  gfx.fillStyle(0x000011)
+  gfx.fillStyle(0x000008, 1)
   gfx.fillRect(0, 0, 480, 40)
-  gfx.fillStyle(0x000000, 0.6)
-  gfx.fillRect(0, 32, 480, 8)
-  const lanePositions = [160, 320]
-  gfx.lineStyle(2, 0x00FFFF, 0.4)
-  lanePositions.forEach(x => {
-    for (let y = 0; y < 40; y += 8) {
-      gfx.lineBetween(x, y, x, y + 4)
-    }
-  })
-  gfx.fillStyle(0x0088FF, 0.3)
-  gfx.fillRect(0, 0, 480, 4)
-  gfx.lineStyle(2, 0x00FFFF, 1.0)
-  gfx.lineBetween(0, 0, 480, 0)
-  gfx.lineStyle(1, 0xFFFFFF, 0.8)
-  gfx.lineBetween(0, 1, 480, 1)
-  gfx.fillStyle(0x001133, 0.15)
-  for (let x = 0; x < 480; x += 20) {
-    gfx.fillRect(x, 0, 1, 40)
-  }
   gfx.generateTexture('ground', 480, 40)
   gfx.destroy()
+
+  // ── GROUND GRID TILE (100×40 px, seamless horizontal scroll) ──────────────────
+  // One tile = one "cell" of the neon road grid.  tilePositionX drives the scroll.
+  const gg = scene.make.graphics({ x: 0, y: 0, add: false })
+  // Base: very dark navy
+  gg.fillStyle(0x000612, 1)
+  gg.fillRect(0, 0, 100, 40)
+  // Top-edge bloom: 3 stacked strips simulating a glow falloff
+  gg.fillStyle(0x0066CC, 0.22)
+  gg.fillRect(0, 0, 100, 2)
+  gg.fillStyle(0x003399, 0.13)
+  gg.fillRect(0, 2, 100, 2)
+  gg.fillStyle(0x001d55, 0.07)
+  gg.fillRect(0, 4, 100, 4)
+  // Main vertical grid line — RIGHT edge (creates seamless repeat when tiled)
+  gg.lineStyle(1.5, 0x0055CC, 0.80)
+  gg.lineBetween(99, 0, 99, 39)
+  // Subdivision line at 50 px (half-brightness)
+  gg.lineStyle(0.8, 0x002a66, 0.40)
+  gg.lineBetween(49, 2, 49, 39)
+  // Horizontal mid scan-line (very subtle perspective cue)
+  gg.lineStyle(0.5, 0x001a3a, 0.25)
+  gg.lineBetween(0, 20, 99, 20)
+  // Bottom dark strip (floor depth / shadow)
+  gg.fillStyle(0x000005, 0.50)
+  gg.fillRect(0, 36, 100, 4)
+  // Node dots at intersections (tiny neon circuit nodes)
+  gg.fillStyle(0x0077EE, 0.70)
+  gg.fillCircle(0, 0, 2.0)    // left-top corner
+  gg.fillCircle(99, 0, 2.0)   // right-top corner
+  gg.fillStyle(0x004499, 0.45)
+  gg.fillCircle(49, 0, 1.5)   // mid-top
+  gg.fillCircle(0, 20, 1.0)   // left-mid
+  gg.fillCircle(99, 20, 1.0)  // right-mid
+  gg.generateTexture('groundGrid', 100, 40)
+  gg.destroy()
+
+  // ── BACKGROUND CIRCUIT TILE (240×160 px, parallax layer) ─────────────────────
+  // Very faint circuit-board pattern scrolling behind the action.
+  const bc = scene.make.graphics({ x: 0, y: 0, add: false })
+  bc.fillStyle(0x000210, 1)
+  bc.fillRect(0, 0, 240, 160)
+  // Grid skeleton
+  bc.lineStyle(0.8, 0x001433, 0.55)
+  for (let x = 0; x <= 240; x += 48) bc.lineBetween(x, 0, x, 160)
+  for (let y = 0; y <= 160; y += 40) bc.lineBetween(0, y, 240, y)
+  // Circuit traces
+  bc.lineStyle(1.0, 0x002255, 0.65)
+  bc.lineBetween(0, 40, 144, 40)
+  bc.lineBetween(144, 40, 144, 80)
+  bc.lineBetween(144, 80, 240, 80)
+  bc.lineBetween(48, 0, 48, 40)
+  bc.lineBetween(0, 120, 96, 120)
+  bc.lineBetween(96, 80, 96, 120)
+  bc.lineBetween(192, 0, 192, 40)
+  bc.lineBetween(192, 80, 192, 160)
+  // Junction nodes
+  bc.fillStyle(0x0044AA, 0.75)
+  bc.fillCircle(144, 40, 2.5)
+  bc.fillCircle(144, 80, 2.5)
+  bc.fillCircle(96, 80, 2.0)
+  bc.fillCircle(96, 120, 2.5)
+  bc.fillCircle(192, 40, 2.0)
+  bc.fillCircle(192, 80, 2.0)
+  bc.fillCircle(48, 40, 2.0)
+  // Brighter edge anchors
+  bc.fillStyle(0x005ACC, 0.60)
+  bc.fillCircle(0, 0, 2.5)
+  bc.fillCircle(48, 0, 2.0)
+  bc.fillCircle(0, 40, 2.0)
+  bc.fillCircle(240, 80, 2.5)
+  bc.fillCircle(0, 120, 2.0)
+  // Tiny "data packet" squares mid-trace
+  bc.fillStyle(0x0088FF, 0.50)
+  bc.fillRect(64, 38, 3, 4)
+  bc.fillRect(100, 78, 3, 4)
+  bc.fillRect(168, 38, 3, 4)
+  bc.generateTexture('bgCircuit', 240, 160)
+  bc.destroy()
 
   // Basey character frames
   const makeBasey = (key: string, leg: number) => {

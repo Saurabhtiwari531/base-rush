@@ -36,27 +36,91 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.audioCtx = null
         }
 
+        // ── BACKGROUND ──────────────────────────────────────────────────────
         this.add.image(240, 320, 'bg').setDepth(0)
 
+        // Parallax circuit layer (depth 0.5, very faint — scrolls 8× slower)
+        this.bgCircuit = this.add.tileSprite(240, 300, 480, 560, 'bgCircuit')
+          .setDepth(0.5).setAlpha(0.07)
+
+        // ── STARS ────────────────────────────────────────────────────────────
         this.stars = []
         for (let i = 0; i < 50; i++) {
           const star = this.add.circle(
             Phaser.Math.Between(0, 480),
             Phaser.Math.Between(0, 560),
             Phaser.Math.Between(1, 2),
-            0xFFFFFF,
-            Phaser.Math.FloatBetween(0.15, 0.6)
-          )
-          star.speed = Phaser.Math.FloatBetween(0.1, 0.3)
+            i % 5 === 0 ? 0x4499FF : 0xFFFFFF,
+            Phaser.Math.FloatBetween(0.12, 0.55)
+          ).setDepth(0.6)
+          star.speed = Phaser.Math.FloatBetween(0.08, 0.25)
           this.stars.push(star)
         }
 
+        // ── PHYSICS GROUND ───────────────────────────────────────────────────
         this.ground = this.physics.add.staticImage(240, 620, 'ground')
         this.ground.setDisplaySize(480, 40)
         this.ground.refreshBody()
         this.ground.setDepth(2)
 
-        this.add.rectangle(240, 600, 480, 3, 0x4488FF, 1).setDepth(3)
+        // ── FLOOR UPLIGHT (subtle blue wash rising from ground into sky) ─────
+        this.add.rectangle(240, 582, 480, 32, 0x001844, 0.14).setDepth(0.9)
+
+        // ── MOVING NEON GRID FLOOR ──────────────────────────────────────────
+        // Sits visually on top of the physics ground; scrolls with game speed
+        this.groundGrid = this.add.tileSprite(240, 620, 480, 40, 'groundGrid').setDepth(2.5)
+
+        // ── FLOOR GLOW — 3 stacked layers = soft bloom effect ───────────────
+        // Sharp bright line at floor top
+        this.floorGlowSharp = this.add.rectangle(240, 600, 480, 2, 0x0077FF, 1.0).setDepth(3.2)
+        // Soft mid-glow
+        this.floorGlowSoft  = this.add.rectangle(240, 602, 480, 8, 0x0033AA, 0.35).setDepth(3.1)
+        // Wide diffuse underglow
+        this.add.rectangle(240, 608, 480, 16, 0x001444, 0.18).setDepth(3.0)
+
+        // ── FOG / GROUND HAZE ────────────────────────────────────────────────
+        // Translucent ellipses drifting left near floor level
+        this.fogPool = []
+        for (let i = 0; i < 5; i++) {
+          const fog = this.add.ellipse(
+            Phaser.Math.Between(0, 480),
+            600 + Phaser.Math.Between(-6, 18),
+            Phaser.Math.Between(80, 150),
+            Phaser.Math.Between(10, 22),
+            i % 2 === 0 ? 0x0044BB : 0x002266,
+            Phaser.Math.FloatBetween(0.025, 0.065)
+          ).setDepth(2.8)
+          fog.driftSpd = Phaser.Math.FloatBetween(0.3, 0.8)
+          this.fogPool.push(fog)
+        }
+
+        // ── DATA-FLOW PARTICLES ──────────────────────────────────────────────
+        // Tiny bright dots racing along the floor line (faster than obstacles)
+        this.dataFlow = []
+        for (let i = 0; i < 8; i++) {
+          const bright = i % 3 === 0
+          const dot = this.add.circle(
+            Phaser.Math.Between(-120, 480),
+            600 + (i % 2 === 0 ? -1 : 2),
+            bright ? 2.5 : 1.5,
+            bright ? 0x00CCFF : 0x0055CC,
+            Phaser.Math.FloatBetween(0.5, 0.95)
+          ).setDepth(3.4)
+          dot.spd = Phaser.Math.FloatBetween(3.5, 7.0)
+          this.dataFlow.push(dot)
+        }
+
+        // ── FLOOR GLOW TWEENS ────────────────────────────────────────────────
+        this.tweens.add({
+          targets: this.floorGlowSharp,
+          alpha: 0.55, duration: 1500,
+          yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+        })
+        this.tweens.add({
+          targets: this.floorGlowSoft,
+          alpha: 0.12, duration: 2100,
+          yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+        })
 
         // HUD title — no box, neon blue text
         this.add.text(240, 22, 'BASE RUSH', {
@@ -414,6 +478,31 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.stars?.forEach((star: any) => {
           star.x -= star.speed * this.speedMultiplier
           if (star.x < -10) star.x = 490
+        })
+
+        // ── ENVIRONMENT ANIMATIONS ─────────────────────────────────────────
+        // Scroll neon grid floor in sync with obstacle speed
+        if (this.groundGrid) this.groundGrid.tilePositionX += this.obstacleSpeed / 60
+        // Scroll far parallax circuit layer (8× slower = depth effect)
+        if (this.bgCircuit) this.bgCircuit.tilePositionX += this.obstacleSpeed / (60 * 8)
+
+        // Fog: drift left slowly, rise slightly, reset when out of view
+        this.fogPool?.forEach((fog: any) => {
+          fog.x -= fog.driftSpd * Math.min(this.speedMultiplier, 2)
+          fog.y -= 0.06
+          if (fog.x < -120 || fog.y < 578) {
+            fog.x = 490 + Phaser.Math.Between(0, 100)
+            fog.y = 602 + Phaser.Math.Between(0, 16)
+          }
+        })
+
+        // Data-flow dots: race at fixed speed (atmospheric, not gameplay-scaled)
+        this.dataFlow?.forEach((dot: any) => {
+          dot.x -= dot.spd
+          if (dot.x < -10) {
+            dot.x = 490 + Phaser.Math.Between(0, 240)
+            dot.y = 600 + (Math.random() < 0.5 ? -1 : 2)
+          }
         })
 
         if (this.speedMultiplier >= 2.5 && Math.random() < 0.03) {
