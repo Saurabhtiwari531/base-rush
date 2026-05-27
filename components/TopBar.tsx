@@ -11,14 +11,16 @@ type Props = {
   refetch: () => void
   leaderboard: LeaderboardEntry[]
   leaderboardLoading: boolean
-  onGoHome?: () => void   // only passed during active gameplay
+  onGoHome?: () => void
+  onTogglePause?: () => void
+  isPaused?: boolean
 }
 
 export function TopBar({
   isConnected, address, disconnect,
   showLeaderboard, setShowLeaderboard, refetch,
   leaderboard, leaderboardLoading,
-  onGoHome,
+  onGoHome, onTogglePause, isPaused,
 }: Props) {
   return (
     <>
@@ -49,6 +51,22 @@ export function TopBar({
           <span style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: '14px' }}>
             ⚡ BASE RUSH
           </span>
+          {onTogglePause && (
+            <button
+              onClick={onTogglePause}
+              title={isPaused ? 'Resume' : 'Pause'}
+              style={{
+                background: isPaused ? 'rgba(0,200,100,0.15)' : 'rgba(255,255,255,0.08)',
+                border: isPaused ? '1px solid #00C864' : '1px solid rgba(255,255,255,0.2)',
+                color: isPaused ? '#00C864' : '#FFFFFF',
+                borderRadius: '8px', padding: '4px 10px',
+                cursor: 'pointer', fontSize: '13px',
+                fontWeight: 'bold', letterSpacing: '1px',
+              }}
+            >
+              {isPaused ? '▶ RESUME' : '⏸'}
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button

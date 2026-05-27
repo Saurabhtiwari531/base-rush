@@ -16,6 +16,7 @@ export default function Home() {
   const [gameStarted, setGameStarted] = useState(false)
   const [gameLoading, setGameLoading] = useState(false)
   const [isGameOver, setIsGameOver] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   const {
@@ -101,7 +102,6 @@ export default function Home() {
   }
 
   const onGoHome = () => {
-    // Destroy Phaser instance cleanly
     if (gameInstanceRef.current) {
       try {
         const scene = gameInstanceRef.current.scene?.scenes?.[0]
@@ -111,7 +111,25 @@ export default function Home() {
       gameInstanceRef.current = null
     }
     setIsGameOver(false)
+    setIsPaused(false)
     setGameStarted(false)
+  }
+
+  const togglePause = () => {
+    if (!gameInstanceRef.current) return
+    try {
+      const scene = gameInstanceRef.current.scene?.scenes?.[0]
+      if (!scene) return
+      if (!isPaused) {
+        scene.scene.pause()
+        // pause audio too if exists
+        if (scene.audioCtx?.state === 'running') scene.audioCtx.suspend()
+      } else {
+        scene.scene.resume()
+        if (scene.audioCtx?.state === 'suspended') scene.audioCtx.resume()
+      }
+      setIsPaused(p => !p)
+    } catch (_) {}
   }
 
   if (!mounted) return null
@@ -143,6 +161,8 @@ export default function Home() {
         leaderboard={leaderboard}
         leaderboardLoading={leaderboardLoading}
         onGoHome={gameStarted ? onGoHome : undefined}
+        onTogglePause={gameStarted && !isGameOver && !gameLoading ? togglePause : undefined}
+        isPaused={isPaused}
       />
 
       {!gameStarted ? (
@@ -181,6 +201,53 @@ export default function Home() {
                   LOADING GAME...
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Pause overlay */}
+          {isPaused && !isGameOver && (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,20,0.82)',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              zIndex: 400, gap: '16px',
+              backdropFilter: 'blur(4px)',
+            }}>
+              <div style={{ fontSize: '48px' }}>⏸</div>
+              <h2 style={{
+                color: '#FFFFFF', fontSize: '28px', fontWeight: 'bold',
+                letterSpacing: '6px', margin: 0,
+                textShadow: '0 0 20px rgba(0,100,255,0.8)',
+              }}>
+                PAUSED
+              </h2>
+              <button
+                onClick={togglePause}
+                style={{
+                  background: 'linear-gradient(135deg, #0052FF, #0088FF)',
+                  border: 'none', color: '#FFF',
+                  padding: '14px 40px', borderRadius: '12px',
+                  fontSize: '16px', fontWeight: 'bold',
+                  cursor: 'pointer', letterSpacing: '2px',
+                  boxShadow: '0 4px 20px rgba(0,82,255,0.5)',
+                  marginTop: '8px',
+                }}
+              >
+                ▶ RESUME
+              </button>
+              <button
+                onClick={onGoHome}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#AAAAAA', padding: '10px 32px',
+                  borderRadius: '10px', fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+              >
+                🏠 Home
+              </button>
             </div>
           )}
 
