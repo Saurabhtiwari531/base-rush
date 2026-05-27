@@ -160,7 +160,6 @@ export default function Home() {
         refetch={refetch}
         leaderboard={leaderboard}
         leaderboardLoading={leaderboardLoading}
-        onGoHome={gameStarted ? onGoHome : undefined}
         onTogglePause={gameStarted && !isGameOver && !gameLoading ? togglePause : undefined}
         isPaused={isPaused}
       />
