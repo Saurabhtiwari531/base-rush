@@ -7,6 +7,8 @@ type Connector = {
 
 type Props = {
   finalScore: number
+  personalBest: number
+  isNewBest: boolean
   isConnected: boolean
   txPending: boolean
   isConfirming: boolean
@@ -35,7 +37,7 @@ function walletColor(id: string) {
 }
 
 export function GameOver({
-  finalScore, isConnected,
+  finalScore, personalBest, isNewBest, isConnected,
   txPending, isConfirming, isPending, txError, canReplay, hash,
   connectors, connectWallet,
   submitScoreToChain, handleRetryTransaction, onPlayAgain, onSkipAndReplay
@@ -65,17 +67,83 @@ export function GameOver({
         }}>
           GAME OVER
         </h1>
+
+        {/* NEW HIGH SCORE banner */}
+        {isNewBest && (
+          <div style={{
+            background: 'linear-gradient(135deg, #FFD700, #FF8C00, #FFD700)',
+            backgroundSize: '200% auto',
+            borderRadius: '10px', padding: '8px 16px',
+            margin: '0 0 10px 0',
+            animation: 'newBestPop 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both, shimmer 2s linear infinite',
+            boxShadow: '0 0 20px rgba(255,215,0,0.6)',
+          }}>
+            <span style={{ color: '#000', fontWeight: 'bold', fontSize: '13px', letterSpacing: '2px' }}>
+              🎉 NEW HIGH SCORE!
+            </span>
+          </div>
+        )}
+
+        {/* Score card */}
         <div style={{
-          background: 'rgba(68,68,255,0.2)', borderRadius: '8px',
-          padding: '12px', margin: '0 0 20px 0'
+          background: isNewBest
+            ? 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,140,0,0.08))'
+            : 'rgba(68,68,255,0.2)',
+          border: isNewBest ? '1px solid rgba(255,215,0,0.4)' : 'none',
+          borderRadius: '10px', padding: '12px', margin: '0 0 10px 0'
         }}>
           <p style={{ color: '#AAAAFF', fontSize: '11px', margin: '0 0 4px 0', letterSpacing: '2px' }}>
             FINAL SCORE
           </p>
-          <p style={{ color: '#FFFFFF', fontSize: '36px', fontWeight: 'bold', margin: 0 }}>
-            {Math.floor(finalScore)}
+          <p style={{
+            color: isNewBest ? '#FFD700' : '#FFFFFF',
+            fontSize: '40px', fontWeight: 'bold', margin: 0,
+            textShadow: isNewBest ? '0 0 20px rgba(255,215,0,0.6)' : 'none',
+          }}>
+            {Math.floor(finalScore).toLocaleString()}
           </p>
+
+          {/* Personal best comparison */}
+          {personalBest > 0 && !isNewBest && (
+            <p style={{ color: '#556677', fontSize: '11px', margin: '6px 0 0 0' }}>
+              🏆 Best: <span style={{ color: '#AAAAFF' }}>{personalBest.toLocaleString()}</span>
+              {'  '}
+              <span style={{ color: '#FF6666' }}>
+                ({Math.floor(finalScore) >= personalBest ? '+' : ''}{(Math.floor(finalScore) - personalBest).toLocaleString()})
+              </span>
+            </p>
+          )}
         </div>
+
+        {/* Twitter / X Share button — always visible */}
+        {finalScore > 0 && (() => {
+          const txt = encodeURIComponent(
+            `🤖 I scored ${Math.floor(finalScore).toLocaleString()} in Base Rush!\n\n⚡ Web3 endless runner on Base Network\n🏆 Can you beat me?\n\nPlay free → baserush.fun\n\n#BaseRush #Base #Web3Gaming`
+          )
+          return (
+            <a
+              href={`https://twitter.com/intent/tweet?text=${txt}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: '8px', width: '100%', marginBottom: '12px',
+                background: '#000000', border: '1px solid #333',
+                color: '#FFFFFF', padding: '11px', borderRadius: '10px',
+                textDecoration: 'none', fontSize: '13px', fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'border-color 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = '#fff')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = '#333')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.629 5.905-5.629zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              Share on X
+            </a>
+          )
+        })()}
 
         {txPending || isConfirming ? (
           <>

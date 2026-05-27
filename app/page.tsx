@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useScoreSubmission, useLeaderboard } from '../hooks/useScoreSubmission'
+import { usePersonalBest } from '../hooks/usePersonalBest'
 import { TopBar } from '../components/TopBar'
 import { StartScreen } from '../components/StartScreen'
 import { GameOver } from '../components/GameOver'
@@ -27,6 +28,8 @@ export default function Home() {
     connectWallet,
   } = useScoreSubmission()
 
+  const { best, isNewBest, checkAndUpdate, resetNewBest } = usePersonalBest()
+
   const { leaderboard, refetch, isLoading: leaderboardLoading } = useLeaderboard()
 
   useEffect(() => { setMounted(true) }, [])
@@ -34,6 +37,18 @@ export default function Home() {
   useEffect(() => {
     if (canReplay) refetch()
   }, [canReplay, refetch])
+
+  // Check personal best whenever finalScore is set
+  useEffect(() => {
+    if (finalScore > 0 && isGameOver) {
+      checkAndUpdate(finalScore)
+    }
+  }, [finalScore, isGameOver])
+
+  // Reset isNewBest when starting a new game
+  useEffect(() => {
+    if (gameStarted) resetNewBest()
+  }, [gameStarted])
 
   // Phaser game init
   useEffect(() => {
@@ -91,6 +106,15 @@ export default function Home() {
     <main style={{ background: '#000', minHeight: '100dvh', overflow: 'hidden' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes newBestPop {
+          0%   { transform: scale(0.5); opacity: 0; }
+          60%  { transform: scale(1.15); opacity: 1; }
+          100% { transform: scale(1); }
+        }
+        @keyframes shimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
         * { box-sizing: border-box; }
         canvas { display: block; }
       `}</style>
@@ -112,6 +136,7 @@ export default function Home() {
           isConnected={isConnected}
           address={address}
           onConnect={connectWallet}
+          personalBest={best}
         />
       ) : (
         <div style={{
@@ -147,6 +172,8 @@ export default function Home() {
           {isGameOver && (
             <GameOver
               finalScore={finalScore}
+              personalBest={best}
+              isNewBest={isNewBest}
               isConnected={isConnected}
               txPending={txPending}
               isConfirming={isConfirming}

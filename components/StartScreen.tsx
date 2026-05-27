@@ -6,9 +6,10 @@ type Props = {
   isConnected: boolean
   address: string | undefined
   onConnect: () => void
+  personalBest: number
 }
 
-export function StartScreen({ onStart, isConnected, address, onConnect }: Props) {
+export function StartScreen({ onStart, isConnected, address, onConnect, personalBest }: Props) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
@@ -155,6 +156,24 @@ export function StartScreen({ onStart, isConnected, address, onConnect }: Props)
             ))}
           </div>
         </div>
+
+        {/* Personal Best */}
+        {personalBest > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '8px', marginBottom: '14px',
+            background: 'rgba(255,215,0,0.08)',
+            border: '1px solid rgba(255,215,0,0.3)',
+            borderRadius: '10px', padding: '8px 16px',
+          }}>
+            <span style={{ fontSize: '16px' }}>🏆</span>
+            <span style={{ color: '#AAAAAA', fontSize: '11px', letterSpacing: '1px' }}>YOUR BEST</span>
+            <span style={{ color: '#FFD700', fontSize: '18px', fontWeight: 'bold' }}>
+              {personalBest.toLocaleString()}
+            </span>
+            <span style={{ color: '#AAAAAA', fontSize: '10px' }}>pts</span>
+          </div>
+        )}
 
         {/* PLAY button */}
         <button
