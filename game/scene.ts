@@ -118,7 +118,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         createAudio(this)
         createPowerUps(this)
 
-        // Spawn obstacles
+        // Spawn obstacles — track last spawn for coin conflict check
+        this.lastObstacleY = 0
+        this.lastObstacleSpawnTime = 0
         this.time.addEvent({
           delay: 1600,
           callback: () => {
@@ -131,6 +133,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
               o.setVelocityX(-this.obstacleSpeed)
               o.obsType = 'high'
               o.setDepth(4)
+              this.lastObstacleY = 575
             } else {
               const o = this.obstacles.create(510, 548, 'obsL')
               o.setDisplaySize(90, 22)
@@ -139,17 +142,33 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
               o.setVelocityX(-this.obstacleSpeed)
               o.obsType = 'low'
               o.setDepth(4)
+              this.lastObstacleY = 548
             }
+            this.lastObstacleSpawnTime = this.time.now
           },
           loop: true
         })
 
-        // Spawn coins
+        // Spawn coins — avoid overlapping with nearby obstacles
         this.time.addEvent({
           delay: 1800,
           callback: () => {
             if (this.isGameOver) return
-            const c = this.coins.create(510, Phaser.Math.Between(480, 560), 'coin')
+
+            // Check if any obstacle is within 200px of spawn point
+            const nearbyObs = (this.obstacles.getChildren() as any[])
+              .filter((o: any) => o.x > 320 && o.x < 520)
+
+            let coinY: number
+            if (nearbyObs.length > 0) {
+              // Pick a Y clearly away from all nearby obstacles
+              const blocked = nearbyObs.some((o: any) => Math.abs(o.y - 490) < 70)
+              coinY = blocked ? 555 : 490
+            } else {
+              coinY = Phaser.Math.Between(485, 555)
+            }
+
+            const c = this.coins.create(510, coinY, 'coin')
             c.setDisplaySize(28, 28)
             c.setDepth(4)
             c.body.allowGravity = false
