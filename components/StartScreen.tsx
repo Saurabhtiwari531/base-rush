@@ -1,4 +1,5 @@
 'use client'
+import { BaseyCanvas } from './BaseyCanvas'
 
 type Props = {
   onStart: () => void
@@ -80,13 +81,9 @@ export function StartScreen({ onStart, isConnected, address, onConnect }: Props)
           ⚡ PLAY TO EARN
         </div>
 
-        {/* Game character art */}
-        <div style={{
-          fontSize: '64px', margin: '8px 0 4px',
-          filter: 'drop-shadow(0 0 12px rgba(0,82,255,0.6))',
-          lineHeight: 1,
-        }}>
-          🏃
+        {/* Game character — actual BASEY robot from game */}
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 4px' }}>
+          <BaseyCanvas />
         </div>
 
         {/* Title */}
