@@ -22,6 +22,7 @@ type Props = {
   handleRetryTransaction: () => void
   onPlayAgain: () => void
   onSkipAndReplay: () => void
+  onGoHome: () => void
 }
 
 function walletIcon(id: string) {
@@ -40,7 +41,7 @@ export function GameOver({
   finalScore, personalBest, isNewBest, isConnected,
   txPending, isConfirming, isPending, txError, canReplay, hash,
   connectors, connectWallet,
-  submitScoreToChain, handleRetryTransaction, onPlayAgain, onSkipAndReplay
+  submitScoreToChain, handleRetryTransaction, onPlayAgain, onSkipAndReplay, onGoHome
 }: Props) {
 
   // De-duplicate: injected + metaMask often point to same wallet
@@ -271,6 +272,22 @@ export function GameOver({
             </button>
           </>
         )}
+
+        {/* Home button — always visible so player can always exit */}
+        <button
+          onClick={onGoHome}
+          style={{
+            marginTop: '10px',
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: '#666', padding: '8px',
+            borderRadius: '10px', fontSize: '12px',
+            cursor: 'pointer', width: '100%',
+            letterSpacing: '1px',
+          }}
+        >
+          🏠 Home
+        </button>
       </div>
     </div>
   )

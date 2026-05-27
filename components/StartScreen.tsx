@@ -221,9 +221,48 @@ export function StartScreen({ onStart, isConnected, address, onConnect, personal
         </div>
       </div>
 
+      {/* Animated scrolling ticker */}
+      <div style={{
+        marginTop: '18px', width: '100%', maxWidth: '360px',
+        overflow: 'hidden', position: 'relative',
+      }}>
+        <style>{`
+          @keyframes ticker {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+        `}</style>
+        <div style={{
+          display: 'flex', whiteSpace: 'nowrap',
+          animation: 'ticker 14s linear infinite',
+          gap: '0px',
+        }}>
+          {/* Duplicate for seamless loop */}
+          {[0, 1].map(i => (
+            <span key={i} style={{ display: 'inline-flex', gap: '0' }}>
+              {[
+                '⚡ BASE RUSH',
+                '🏆 WEEKLY PRIZES',
+                '⛓️ ON-CHAIN SCORES',
+                '🛡️ POWER-UPS',
+                '🪙 COLLECT COINS',
+                '🚀 PLAY TO EARN',
+              ].map(item => (
+                <span key={item} style={{
+                  color: '#1a3366', fontSize: '10px', letterSpacing: '2px',
+                  padding: '0 20px', fontWeight: 'bold',
+                }}>
+                  {item}  ·
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
+      </div>
+
       {/* Base branding */}
       <div style={{
-        marginTop: '16px', color: '#223344', fontSize: '10px', letterSpacing: '1px',
+        marginTop: '10px', color: '#1a2a3a', fontSize: '9px', letterSpacing: '1px',
       }}>
         Powered by Base Network · Scores stored on-chain
       </div>

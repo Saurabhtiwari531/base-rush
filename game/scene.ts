@@ -150,24 +150,20 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           loop: true
         })
 
-        // Spawn coins — avoid overlapping with nearby obstacles
+        // Spawn coins — obstacles live at y=548–575, so coins must stay above y=520
         this.time.addEvent({
           delay: 1800,
           callback: () => {
             if (this.isGameOver) return
 
-            // Check if any obstacle is within 200px of spawn point
+            // Wider detection zone: 260–530 catches obstacles at spawn point too
             const nearbyObs = (this.obstacles.getChildren() as any[])
-              .filter((o: any) => o.x > 320 && o.x < 520)
+              .filter((o: any) => o.x > 260 && o.x < 530)
 
-            let coinY: number
-            if (nearbyObs.length > 0) {
-              // Pick a Y clearly away from all nearby obstacles
-              const blocked = nearbyObs.some((o: any) => Math.abs(o.y - 490) < 70)
-              coinY = blocked ? 555 : 490
-            } else {
-              coinY = Phaser.Math.Between(485, 555)
-            }
+            // Always keep coins above the obstacle danger zone (y > 520)
+            const coinY = nearbyObs.length > 0
+              ? Phaser.Math.Between(445, 475)   // obstacle nearby → force jump-height coin
+              : Phaser.Math.Between(460, 510)   // no obstacle → comfortable mid-air coin
 
             const c = this.coins.create(510, coinY, 'coin')
             c.setDisplaySize(28, 28)

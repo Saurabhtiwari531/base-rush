@@ -268,6 +268,7 @@ export default function Home() {
               handleRetryTransaction={handleRetryTransaction}
               onPlayAgain={onPlayAgain}
               onSkipAndReplay={onSkipAndReplay}
+              onGoHome={onGoHome}
             />
           )}
         </div>
