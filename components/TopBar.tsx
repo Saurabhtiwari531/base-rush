@@ -1,6 +1,36 @@
 'use client'
 
+import { useState } from 'react'
 import { LeaderboardEntry } from '../lib/contract'
+
+// ── helpers ─────────────────────────────────────────────────────────────────
+const bodyText: React.CSSProperties = {
+  color: '#8899AA', fontSize: '11px', lineHeight: '1.6', margin: 0,
+}
+
+function Section({
+  icon, title, color, children,
+}: {
+  icon: string
+  title: string
+  color: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px',
+      }}>
+        <span style={{ fontSize: '14px' }}>{icon}</span>
+        <span style={{
+          color, fontSize: '10px', fontWeight: 'bold', letterSpacing: '2px',
+        }}>{title}</span>
+        <div style={{ flex: 1, height: '1px', background: `${color}33` }} />
+      </div>
+      {children}
+    </div>
+  )
+}
 
 type Props = {
   isConnected: boolean
@@ -21,6 +51,8 @@ export function TopBar({
   leaderboard, leaderboardLoading,
   onTogglePause, isPaused,
 }: Props) {
+  const [showHowItWorks, setShowHowItWorks] = useState(false)
+
   return (
     <>
       <div style={{
@@ -30,7 +62,8 @@ export function TopBar({
         padding: '8px 16px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* ── LEFT SIDE ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {onTogglePause ? (
             /* In-game: show pause/resume button only */
             <button
@@ -49,31 +82,51 @@ export function TopBar({
               {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
             </button>
           ) : (
-            /* Start / Game-over screen: show brand */
-            <span style={{
-              color: '#4499FF', fontWeight: 'bold', fontSize: '15px',
-              letterSpacing: '3px',
-              textShadow: '0 0 12px rgba(0,120,255,0.8)',
-            }}>
-              ⚡ BASE RUSH
-            </span>
+            /* Start / Game-over screen: brand + menu items */
+            <>
+              <span style={{
+                color: '#4499FF', fontWeight: 'bold', fontSize: '15px',
+                letterSpacing: '3px',
+                textShadow: '0 0 12px rgba(0,120,255,0.8)',
+              }}>
+                ⚡ BASE RUSH
+              </span>
+
+              {/* Divider */}
+              <div style={{ width: '1px', height: '18px', background: 'rgba(0,68,255,0.35)' }} />
+
+              {/* How It Works */}
+              <button
+                onClick={() => setShowHowItWorks(true)}
+                style={{
+                  background: 'rgba(0,82,255,0.15)',
+                  border: '1px solid rgba(0,82,255,0.4)',
+                  color: '#88BBFF', padding: '4px 10px', borderRadius: '20px',
+                  cursor: 'pointer', fontSize: '11px', fontWeight: 'bold',
+                  letterSpacing: '0.5px', whiteSpace: 'nowrap',
+                }}
+              >
+                📖 How It Works
+              </button>
+
+              {/* Leaderboard */}
+              <button
+                onClick={() => { setShowLeaderboard(!showLeaderboard); if (!showLeaderboard) refetch() }}
+                style={{
+                  background: 'rgba(255,215,0,0.15)', border: '1px solid #FFD700',
+                  color: '#FFD700', padding: '4px 10px', borderRadius: '20px',
+                  cursor: 'pointer', fontSize: '11px', fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                🏆 Leaderboard
+              </button>
+            </>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => {
-              setShowLeaderboard(!showLeaderboard)
-              if (!showLeaderboard) refetch()
-            }}
-            style={{
-              background: 'rgba(255,215,0,0.15)', border: '1px solid #FFD700',
-              color: '#FFD700', padding: '4px 12px', borderRadius: '20px',
-              cursor: 'pointer', fontSize: '12px', fontWeight: 'bold'
-            }}
-          >
-            🏆 Top 3
-          </button>
 
+        {/* ── RIGHT SIDE — wallet only ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {isConnected && (
             <>
               <span style={{
@@ -95,6 +148,190 @@ export function TopBar({
           )}
         </div>
       </div>
+
+      {/* ── HOW IT WORKS MODAL ── */}
+      {showHowItWorks && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.95)', zIndex: 500,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px', overflowY: 'auto',
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(0,8,40,0.98) 0%, rgba(0,4,20,0.98) 100%)',
+            border: '2px solid #0052FF', borderRadius: '20px', padding: '28px 24px',
+            maxWidth: '460px', width: '100%', position: 'relative',
+            boxShadow: '0 0 40px rgba(0,82,255,0.3)',
+          }}>
+            {/* Close */}
+            <button
+              onClick={() => setShowHowItWorks(false)}
+              style={{
+                position: 'absolute', top: '14px', right: '14px',
+                background: 'rgba(255,68,68,0.2)', border: '1px solid #FF4444',
+                color: '#FF4444', width: '30px', height: '30px',
+                borderRadius: '50%', cursor: 'pointer', fontSize: '16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >×</button>
+
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '8px' }}>📖</div>
+              <h2 style={{
+                color: '#4499FF', fontSize: '22px', fontWeight: 'bold',
+                margin: '0 0 4px', letterSpacing: '4px',
+                textShadow: '0 0 16px rgba(0,100,255,0.6)',
+              }}>HOW IT WORKS</h2>
+              <p style={{ color: '#445566', fontSize: '11px', margin: 0, letterSpacing: '1px' }}>
+                CYBERPUNK RUNNER · BASE NETWORK
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+              {/* The Game */}
+              <Section icon="🎮" title="THE GAME" color="#4499FF">
+                <p style={bodyText}>
+                  BASE RUSH is an infinite cyberpunk runner. Your character — <strong style={{ color: '#88CCFF' }}>Basey</strong> —
+                  sprints through a neon grid world that gets faster every second.
+                  Dodge obstacles, collect coins, and survive as long as you can.
+                </p>
+              </Section>
+
+              {/* Controls */}
+              <Section icon="⌨️" title="CONTROLS" color="#00CCFF">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  {[
+                    { key: 'SPACE / ↑ / Tap', action: '🦘 Jump', color: '#00CCFF' },
+                    { key: 'DOWN ↓ / Swipe down', action: '🧎 Slide', color: '#00CCFF' },
+                    { key: 'High obstacle', action: '→ Duck/Slide', color: '#FF8844' },
+                    { key: 'Low obstacle', action: '→ Jump over', color: '#FF8844' },
+                  ].map(c => (
+                    <div key={c.action} style={{
+                      background: 'rgba(0,82,255,0.08)',
+                      border: '1px solid rgba(0,82,255,0.2)',
+                      borderRadius: '8px', padding: '8px',
+                    }}>
+                      <div style={{ color: '#AACCFF', fontSize: '9px', marginBottom: '3px' }}>{c.key}</div>
+                      <div style={{ color: c.color, fontSize: '11px', fontWeight: 'bold' }}>{c.action}</div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+
+              {/* Scoring */}
+              <Section icon="🪙" title="SCORING" color="#FFD700">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {[
+                    { label: 'Each coin', val: '+10 pts', note: 'base value' },
+                    { label: '5-coin combo', val: '+20 pts', note: '2× multiplier 🔥' },
+                    { label: '10-coin combo', val: '+30 pts', note: '3× multiplier 🔥🔥' },
+                    { label: 'Survive longer', val: '+pts/sec', note: 'speed multiplier scales score' },
+                  ].map(s => (
+                    <div key={s.label} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '6px 10px',
+                      background: 'rgba(255,215,0,0.06)',
+                      border: '1px solid rgba(255,215,0,0.15)',
+                      borderRadius: '8px',
+                    }}>
+                      <span style={{ color: '#AAAAAA', fontSize: '11px' }}>{s.label}</span>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ color: '#FFD700', fontSize: '13px', fontWeight: 'bold' }}>{s.val}</span>
+                        <span style={{ color: '#555566', fontSize: '9px', marginLeft: '6px' }}>{s.note}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+
+              {/* Power-ups */}
+              <Section icon="⚡" title="POWER-UPS" color="#FF00FF">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[
+                    { icon: '🛡️', name: 'Shield', desc: 'Block the next obstacle hit — one free life', color: '#00FFFF' },
+                    { icon: '🧲', name: 'Magnet', desc: 'Pulls nearby coins towards you automatically', color: '#FF44FF' },
+                    { icon: '⏱️', name: 'Slow-Mo', desc: 'Everything slows down — easier dodging & sliding', color: '#FFAA00' },
+                    { icon: '×2', name: '2× Points', desc: 'Every coin scores double for a limited time', color: '#00FF88' },
+                  ].map(p => (
+                    <div key={p.name} style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '8px 10px',
+                      background: 'rgba(255,0,255,0.06)',
+                      border: '1px solid rgba(255,0,255,0.2)',
+                      borderRadius: '8px',
+                    }}>
+                      <div style={{
+                        width: '34px', height: '34px', borderRadius: '8px',
+                        background: 'rgba(0,0,0,0.4)',
+                        border: `1px solid ${p.color}44`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '18px', flexShrink: 0,
+                      }}>{p.icon}</div>
+                      <div>
+                        <div style={{ color: p.color, fontSize: '12px', fontWeight: 'bold' }}>{p.name}</div>
+                        <div style={{ color: '#778899', fontSize: '10px', marginTop: '2px' }}>{p.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+
+              {/* On-chain */}
+              <Section icon="⛓️" title="ON-CHAIN SCORING" color="#00FF88">
+                <div style={{
+                  padding: '12px',
+                  background: 'rgba(0,255,100,0.06)',
+                  border: '1px solid rgba(0,255,100,0.2)',
+                  borderRadius: '10px',
+                }}>
+                  <p style={{ ...bodyText, margin: '0 0 8px' }}>
+                    When your game ends, your score is submitted to the <strong style={{ color: '#00FF88' }}>Base Network</strong> blockchain.
+                    No servers — your high score lives permanently on-chain.
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    {[
+                      { rank: '🥇', prize: '$5', label: '1st Place' },
+                      { rank: '🥈', prize: '$3', label: '2nd Place' },
+                      { rank: '🥉', prize: '$1', label: '3rd Place' },
+                    ].map(r => (
+                      <div key={r.rank} style={{
+                        flex: 1, textAlign: 'center',
+                        background: 'rgba(0,0,0,0.3)',
+                        border: '1px solid rgba(255,215,0,0.25)',
+                        borderRadius: '8px', padding: '8px 4px',
+                      }}>
+                        <div style={{ fontSize: '20px' }}>{r.rank}</div>
+                        <div style={{ color: '#FFD700', fontSize: '14px', fontWeight: 'bold' }}>{r.prize}</div>
+                        <div style={{ color: '#556677', fontSize: '9px' }}>{r.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ color: '#334455', fontSize: '9px', margin: '10px 0 0', textAlign: 'center' }}>
+                    🗓 Weekly prizes · Resets every Sunday
+                  </p>
+                </div>
+              </Section>
+            </div>
+
+            <button
+              onClick={() => setShowHowItWorks(false)}
+              style={{
+                marginTop: '20px', width: '100%',
+                background: 'linear-gradient(135deg, #0052FF, #0088FF)',
+                border: 'none', color: '#FFF',
+                padding: '13px', borderRadius: '12px',
+                fontSize: '14px', fontWeight: 'bold',
+                cursor: 'pointer', letterSpacing: '2px',
+                boxShadow: '0 4px 20px rgba(0,82,255,0.4)',
+              }}
+            >
+              GOT IT — LET'S PLAY ▶
+            </button>
+          </div>
+        </div>
+      )}
 
       {showLeaderboard && (
         <div style={{

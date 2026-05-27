@@ -122,6 +122,34 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
         })
 
+        // ── ELECTRIC PULSE — periodic bright cyan surge along the floor line ──
+        const spawnElectricPulse = () => {
+          if (this.isGameOver) return
+          // Bright leading dot
+          const pulse = this.add.circle(0, 600, 4, 0x00FFFF, 1.0).setDepth(3.5)
+          // Trailing glow strip
+          const trail = this.add.rectangle(0, 600, 1, 3, 0x00CCFF, 0.6).setDepth(3.45)
+          this.tweens.add({
+            targets: pulse,
+            x: 490, duration: 320,
+            ease: 'Linear',
+            onUpdate: () => {
+              trail.x = pulse.x - 20
+              trail.width = 40
+            },
+            onComplete: () => { pulse.destroy(); trail.destroy() }
+          })
+        }
+        // Random interval 2.5–6 s
+        const schedulePulse = () => {
+          if (this.isGameOver) return
+          this.time.delayedCall(Phaser.Math.Between(2500, 6000), () => {
+            spawnElectricPulse()
+            schedulePulse()
+          })
+        }
+        schedulePulse()
+
         // HUD title — no box, neon blue text
         this.add.text(240, 22, 'BASE RUSH', {
           fontSize: '16px', color: '#4488FF', fontStyle: 'bold', letterSpacing: 6,
@@ -417,6 +445,10 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.input.keyboard.on('keydown-SPACE', doJump)
         this.input.keyboard.on('keydown-UP', doJump)
         this.input.keyboard.on('keydown-DOWN', doSlide)
+
+        // Expose to React so the full-screen container can forward touches
+        ;(window as any).gameJumpInput = doJump
+        ;(window as any).gameSlideInput = doSlide
 
         let sx = 0, sy = 0
         this.input.on('pointerdown', (p: any) => { sx = p.x; sy = p.y })

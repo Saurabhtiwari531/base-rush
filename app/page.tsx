@@ -75,6 +75,8 @@ export default function Home() {
         game.destroy(true)
         gameInstanceRef.current = null
       }
+      delete (window as any).gameJumpInput
+      delete (window as any).gameSlideInput
     }
   }, [gameStarted])
 
@@ -90,6 +92,29 @@ export default function Home() {
       delete (window as any).gameReady
     }
   }, [isConnected, submitScoreToChain])
+
+  // Full-screen touch handler — forwards taps/swipes to Phaser even in letterbox area
+  const touchRef = useRef<{ x: number; y: number } | null>(null)
+  const onContainerTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    touchRef.current = { x: t.clientX, y: t.clientY }
+  }
+  const onContainerTouchEnd = (e: React.TouchEvent) => {
+    if (!touchRef.current || isGameOver) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - touchRef.current.x
+    const dy = t.clientY - touchRef.current.y
+    const adx = Math.abs(dx)
+    const ady = Math.abs(dy)
+    if (adx < 18 && ady < 18) {
+      const fn = (window as any).gameJumpInput
+      if (fn) fn()
+    } else if (ady > adx) {
+      if (dy < 0) { const fn = (window as any).gameJumpInput; if (fn) fn() }
+      else { const fn = (window as any).gameSlideInput; if (fn) fn() }
+    }
+    touchRef.current = null
+  }
 
   const onPlayAgain = () => {
     handlePlayAgain(gameInstanceRef, setGameStarted, setIsGameOver, setShowLeaderboard)
@@ -173,11 +198,15 @@ export default function Home() {
           personalBest={best}
         />
       ) : (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'radial-gradient(ellipse at 50% 30%, #020E2C 0%, #000810 70%, #000408 100%)',
-          overflow: 'hidden'
-        }}>
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'radial-gradient(ellipse at 50% 30%, #020E2C 0%, #000810 70%, #000408 100%)',
+            overflow: 'hidden'
+          }}
+          onTouchStart={onContainerTouchStart}
+          onTouchEnd={onContainerTouchEnd}
+        >
           {/* Ambient stars — visible in letterbox areas around the game canvas */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
             {[...Array(28)].map((_, i) => (
@@ -204,6 +233,18 @@ export default function Home() {
               <div style={{ width: '30px', height: '1px', background: 'rgba(0,68,255,0.25)' }} />
             </div>
           </div>
+
+          {/* Desktop side-area glow — visible in letterbox beside the canvas on wide screens */}
+          <div style={{
+            position: 'absolute', top: '44px', left: 0, bottom: 0, width: '22%',
+            background: 'radial-gradient(ellipse at right center, rgba(0,60,200,0.12) 0%, transparent 70%)',
+            pointerEvents: 'none', zIndex: 2,
+          }} />
+          <div style={{
+            position: 'absolute', top: '44px', right: 0, bottom: 0, width: '22%',
+            background: 'radial-gradient(ellipse at left center, rgba(0,60,200,0.12) 0%, transparent 70%)',
+            pointerEvents: 'none', zIndex: 2,
+          }} />
 
           {/* Phaser mounts here — full area below TopBar, sits above background layer */}
           <div
