@@ -100,6 +100,20 @@ export default function Home() {
     setTimeout(() => setGameStarted(true), 100)
   }
 
+  const onGoHome = () => {
+    // Destroy Phaser instance cleanly
+    if (gameInstanceRef.current) {
+      try {
+        const scene = gameInstanceRef.current.scene?.scenes?.[0]
+        if (scene?.audioCtx) scene.audioCtx.close()
+      } catch (_) {}
+      gameInstanceRef.current.destroy(true)
+      gameInstanceRef.current = null
+    }
+    setIsGameOver(false)
+    setGameStarted(false)
+  }
+
   if (!mounted) return null
 
   return (
@@ -128,6 +142,7 @@ export default function Home() {
         refetch={refetch}
         leaderboard={leaderboard}
         leaderboardLoading={leaderboardLoading}
+        onGoHome={gameStarted ? onGoHome : undefined}
       />
 
       {!gameStarted ? (

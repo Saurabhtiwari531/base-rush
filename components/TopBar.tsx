@@ -11,12 +11,14 @@ type Props = {
   refetch: () => void
   leaderboard: LeaderboardEntry[]
   leaderboardLoading: boolean
+  onGoHome?: () => void   // only passed during active gameplay
 }
 
 export function TopBar({
   isConnected, address, disconnect,
   showLeaderboard, setShowLeaderboard, refetch,
-  leaderboard, leaderboardLoading
+  leaderboard, leaderboardLoading,
+  onGoHome,
 }: Props) {
   return (
     <>
@@ -27,9 +29,27 @@ export function TopBar({
         padding: '8px 16px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
-        <span style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: '14px' }}>
-          ⚡ BASE RUSH
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {onGoHome && (
+            <button
+              onClick={onGoHome}
+              title="Back to Home"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#FFFFFF', borderRadius: '8px',
+                padding: '4px 10px', cursor: 'pointer',
+                fontSize: '16px', lineHeight: 1,
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              ⬅
+            </button>
+          )}
+          <span style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: '14px' }}>
+            ⚡ BASE RUSH
+          </span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
             onClick={() => {
