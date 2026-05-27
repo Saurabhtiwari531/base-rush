@@ -58,10 +58,11 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         this.add.rectangle(240, 600, 480, 3, 0x4488FF, 1).setDepth(3)
 
-        this.add.rectangle(240, 28, 200, 34, 0x000000, 0.3).setStrokeStyle(1.5, 0xFFFFFF)
-        this.add.text(240, 28, 'BASE RUSH', {
-          fontSize: '20px', color: '#FFFFFF', fontStyle: 'bold', letterSpacing: 5
-        }).setOrigin(0.5)
+        // HUD title — no box, neon blue text
+        this.add.text(240, 22, 'BASE RUSH', {
+          fontSize: '16px', color: '#4488FF', fontStyle: 'bold', letterSpacing: 6,
+          stroke: '#000022', strokeThickness: 4,
+        }).setOrigin(0.5).setDepth(10)
 
         this.basey = this.physics.add.image(80, 555, 'b0').setDepth(4)
         this.basey.setDisplaySize(48, 60)
@@ -73,18 +74,18 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.baseyGlow = this.add.circle(80, 590, 26, 0xFFFFFF, 0.08).setDepth(1)
 
         this.score = 0
-        this.scoreText = this.add.text(14, 54, 'SCORE  0', {
-          fontSize: '14px', color: '#FFFFFF', fontStyle: 'bold'
+        this.scoreText = this.add.text(14, 40, 'SCORE  0', {
+          fontSize: '13px', color: '#FFFFFF', fontStyle: 'bold'
         }).setDepth(10)
 
         this.speedMultiplier = 1.0
-        this.speedText = this.add.text(340, 54, 'SPEED 1.0x', {
-          fontSize: '14px', color: '#00FFFF', fontStyle: 'bold',
+        this.speedText = this.add.text(466, 40, 'SPEED 1.0x', {
+          fontSize: '13px', color: '#00FFFF', fontStyle: 'bold',
           stroke: '#000033', strokeThickness: 3
-        }).setDepth(10)
+        }).setOrigin(1, 0).setDepth(10)
 
         this.combo = 0
-        this.comboText = this.add.text(14, 78, '', {
+        this.comboText = this.add.text(14, 60, '', {
           fontSize: '13px', color: '#FFD700', fontStyle: 'bold'
         }).setDepth(10)
         this.comboText.setVisible(false)
@@ -101,7 +102,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.doubleIcon = null
 
         this.lives = 3
-        this.livesText = this.add.text(330, 12, '❤️ ❤️ ❤️', { fontSize: '18px' }).setDepth(10)
+        this.livesText = this.add.text(468, 22, '❤️ ❤️ ❤️', { fontSize: '16px' }).setOrigin(1, 0.5).setDepth(10)
 
         this.obstacles = this.physics.add.group()
         this.coins = this.physics.add.group()

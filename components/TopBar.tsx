@@ -31,10 +31,8 @@ export function TopBar({
         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: '14px' }}>
-            ⚡ BASE RUSH
-          </span>
-          {onTogglePause && (
+          {onTogglePause ? (
+            /* In-game: show pause/resume button only */
             <button
               onClick={onTogglePause}
               title={isPaused ? 'Resume' : 'Pause'}
@@ -42,14 +40,23 @@ export function TopBar({
                 background: isPaused ? 'rgba(0,200,100,0.2)' : 'rgba(0,82,255,0.2)',
                 border: isPaused ? '1px solid #00C864' : '1px solid #0052FF',
                 color: isPaused ? '#00C864' : '#FFFFFF',
-                borderRadius: '10px', padding: '6px 16px',
+                borderRadius: '10px', padding: '6px 18px',
                 cursor: 'pointer', fontSize: '15px',
                 fontWeight: 'bold', letterSpacing: '1px',
-                minWidth: '90px',
+                minWidth: '96px',
               }}
             >
               {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
             </button>
+          ) : (
+            /* Start / Game-over screen: show brand */
+            <span style={{
+              color: '#4499FF', fontWeight: 'bold', fontSize: '15px',
+              letterSpacing: '3px',
+              textShadow: '0 0 12px rgba(0,120,255,0.8)',
+            }}>
+              ⚡ BASE RUSH
+            </span>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
