@@ -135,7 +135,7 @@ export default function Home() {
   if (!mounted) return null
 
   return (
-    <main style={{ background: '#000', minHeight: '100dvh', overflow: 'hidden' }}>
+    <main style={{ background: '#000810', minHeight: '100dvh', overflow: 'hidden' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes newBestPop {
@@ -175,19 +175,47 @@ export default function Home() {
       ) : (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: '#000', overflow: 'hidden'
+          background: 'radial-gradient(ellipse at 50% 30%, #020E2C 0%, #000810 70%, #000408 100%)',
+          overflow: 'hidden'
         }}>
-          {/* Phaser mounts here — full area below TopBar */}
+          {/* Ambient stars — visible in letterbox areas around the game canvas */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+            {[...Array(28)].map((_, i) => (
+              <div key={i} style={{
+                position: 'absolute',
+                width: i % 3 === 0 ? '2.5px' : '1.5px',
+                height: i % 3 === 0 ? '2.5px' : '1.5px',
+                background: i % 5 === 0 ? '#0044DD' : '#FFFFFF',
+                borderRadius: '50%',
+                top: `${(i * 37 + 8) % 100}%`,
+                left: `${(i * 61 + 4) % 100}%`,
+                opacity: 0.1 + (i % 5) * 0.04,
+              }} />
+            ))}
+            {/* Bottom branding strip */}
+            <div style={{
+              position: 'absolute', bottom: '10px', left: 0, right: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            }}>
+              <div style={{ width: '30px', height: '1px', background: 'rgba(0,68,255,0.25)' }} />
+              <span style={{ color: '#0a2040', fontSize: '9px', letterSpacing: '3px', fontWeight: 'bold' }}>
+                ⚡ BASERUSH.FUN
+              </span>
+              <div style={{ width: '30px', height: '1px', background: 'rgba(0,68,255,0.25)' }} />
+            </div>
+          </div>
+
+          {/* Phaser mounts here — full area below TopBar, sits above background layer */}
           <div
             ref={gameRef}
-            style={{ position: 'absolute', top: '44px', left: 0, right: 0, bottom: 0 }}
+            style={{ position: 'absolute', top: '44px', left: 0, right: 0, bottom: 0, zIndex: 1 }}
           />
 
           {gameLoading && (
             <div style={{
               position: 'absolute', top: '44px', left: 0, right: 0, bottom: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#000000', zIndex: 300
+              background: 'radial-gradient(ellipse at top, #020E2C, #000408)', zIndex: 300
             }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{

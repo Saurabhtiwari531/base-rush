@@ -10,7 +10,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
     parent,
     scale: {
       mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
+      autoCenter: Phaser.Scale.CENTER_HORIZONTALLY, // canvas sticks to top — no top gap
     },
     physics: {
       default: 'arcade',
