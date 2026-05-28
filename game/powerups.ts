@@ -68,7 +68,7 @@ export function createPowerUps(scene: any) {
     scene.obstacles.getChildren().forEach((o: any) => { o.setVelocityX(-scene.obstacleSpeed) })
     scene.coins.getChildren().forEach((c: any) => { c.setVelocityX(-scene.obstacleSpeed) })
     scene.powerups.getChildren().forEach((p: any) => { p.setVelocityX(-scene.obstacleSpeed) })
-    scene.slowMoOverlay = scene.add.rectangle(240, 320, 480, 640, 0x6600FF, 0.08).setDepth(50)
+    scene.slowMoOverlay = scene.add.rectangle(240, 384, 480, 768, 0x6600FF, 0.08).setDepth(50)
     // After 5s, restore to current speed (which has been naturally increasing during slow-mo)
     // rather than the frozen pre-slowmo value to avoid jarring speed jump
     scene.time.delayedCall(5000, () => {

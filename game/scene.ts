@@ -6,7 +6,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
   return {
     type: Phaser.AUTO,
     width: 480,
-    height: 640,
+    height: 768,
     parent,
     scale: {
       mode: Phaser.Scale.FIT,
@@ -36,19 +36,24 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.audioCtx = null
         }
 
+        // Mobile detection — reduce heavy effects on small screens
+        const isMobile = window.innerWidth < 600
+        this.isMobile = isMobile
+
         // ── BACKGROUND ──────────────────────────────────────────────────────
-        this.add.image(240, 320, 'bg').setDepth(0)
+        this.add.image(240, 384, 'bg').setDepth(0)
 
         // Parallax circuit layer (depth 0.5, very faint — scrolls 8× slower)
-        this.bgCircuit = this.add.tileSprite(240, 300, 480, 560, 'bgCircuit')
+        this.bgCircuit = this.add.tileSprite(240, 428, 480, 688, 'bgCircuit')
           .setDepth(0.5).setAlpha(0.07)
 
         // ── STARS ────────────────────────────────────────────────────────────
+        const starCount = isMobile ? 28 : 50
         this.stars = []
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < starCount; i++) {
           const star = this.add.circle(
             Phaser.Math.Between(0, 480),
-            Phaser.Math.Between(0, 560),
+            Phaser.Math.Between(0, 688),
             Phaser.Math.Between(1, 2),
             i % 5 === 0 ? 0x4499FF : 0xFFFFFF,
             Phaser.Math.FloatBetween(0.12, 0.55)
@@ -58,33 +63,33 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
 
         // ── PHYSICS GROUND ───────────────────────────────────────────────────
-        this.ground = this.physics.add.staticImage(240, 620, 'ground')
+        this.ground = this.physics.add.staticImage(240, 748, 'ground')
         this.ground.setDisplaySize(480, 40)
         this.ground.refreshBody()
         this.ground.setDepth(2)
 
         // ── FLOOR UPLIGHT (subtle blue wash rising from ground into sky) ─────
-        this.add.rectangle(240, 582, 480, 32, 0x001844, 0.14).setDepth(0.9)
+        this.add.rectangle(240, 710, 480, 32, 0x001844, 0.14).setDepth(0.9)
 
         // ── MOVING NEON GRID FLOOR ──────────────────────────────────────────
         // Sits visually on top of the physics ground; scrolls with game speed
-        this.groundGrid = this.add.tileSprite(240, 620, 480, 40, 'groundGrid').setDepth(2.5)
+        this.groundGrid = this.add.tileSprite(240, 748, 480, 40, 'groundGrid').setDepth(2.5)
 
         // ── FLOOR GLOW — 3 stacked layers = soft bloom effect ───────────────
         // Sharp bright line at floor top
-        this.floorGlowSharp = this.add.rectangle(240, 600, 480, 2, 0x0077FF, 1.0).setDepth(3.2)
+        this.floorGlowSharp = this.add.rectangle(240, 728, 480, 2, 0x0077FF, 1.0).setDepth(3.2)
         // Soft mid-glow
-        this.floorGlowSoft  = this.add.rectangle(240, 602, 480, 8, 0x0033AA, 0.35).setDepth(3.1)
+        this.floorGlowSoft  = this.add.rectangle(240, 730, 480, 8, 0x0033AA, 0.35).setDepth(3.1)
         // Wide diffuse underglow
-        this.add.rectangle(240, 608, 480, 16, 0x001444, 0.18).setDepth(3.0)
+        this.add.rectangle(240, 736, 480, 16, 0x001444, 0.18).setDepth(3.0)
 
         // ── FOG / GROUND HAZE ────────────────────────────────────────────────
-        // Translucent ellipses drifting left near floor level
+        const fogCount = isMobile ? 3 : 5
         this.fogPool = []
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < fogCount; i++) {
           const fog = this.add.ellipse(
             Phaser.Math.Between(0, 480),
-            600 + Phaser.Math.Between(-6, 18),
+            728 + Phaser.Math.Between(-6, 18),
             Phaser.Math.Between(80, 150),
             Phaser.Math.Between(10, 22),
             i % 2 === 0 ? 0x0044BB : 0x002266,
@@ -95,13 +100,13 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
 
         // ── DATA-FLOW PARTICLES ──────────────────────────────────────────────
-        // Tiny bright dots racing along the floor line (faster than obstacles)
+        const dataCount = isMobile ? 5 : 8
         this.dataFlow = []
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < dataCount; i++) {
           const bright = i % 3 === 0
           const dot = this.add.circle(
             Phaser.Math.Between(-120, 480),
-            600 + (i % 2 === 0 ? -1 : 2),
+            728 + (i % 2 === 0 ? -1 : 2),
             bright ? 2.5 : 1.5,
             bright ? 0x00CCFF : 0x0055CC,
             Phaser.Math.FloatBetween(0.5, 0.95)
@@ -126,9 +131,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         const spawnElectricPulse = () => {
           if (this.isGameOver) return
           // Bright leading dot
-          const pulse = this.add.circle(0, 600, 4, 0x00FFFF, 1.0).setDepth(3.5)
+          const pulse = this.add.circle(0, 728, 4, 0x00FFFF, 1.0).setDepth(3.5)
           // Trailing glow strip
-          const trail = this.add.rectangle(0, 600, 1, 3, 0x00CCFF, 0.6).setDepth(3.45)
+          const trail = this.add.rectangle(0, 728, 1, 3, 0x00CCFF, 0.6).setDepth(3.45)
           this.tweens.add({
             targets: pulse,
             x: 490, duration: 320,
@@ -156,16 +161,17 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           stroke: '#000022', strokeThickness: 4,
         }).setOrigin(0.5).setDepth(10)
 
-        this.basey = this.physics.add.image(80, 555, 'b0').setDepth(4)
+        this.basey = this.physics.add.image(80, 683, 'b0').setDepth(4)
         this.basey.setDisplaySize(48, 60)
         this.basey.body.setSize(34, 56)
         this.basey.setBounce(0)
         this.basey.setCollideWorldBounds(true)
         this.physics.add.collider(this.basey, this.ground)
 
-        this.baseyGlow = this.add.circle(80, 590, 26, 0xFFFFFF, 0.08).setDepth(1)
+        this.baseyGlow = this.add.circle(80, 718, 26, 0xFFFFFF, 0.08).setDepth(1)
 
         this.score = 0
+        this.lastScoreDisplay = 0
         this.scoreText = this.add.text(14, 40, 'SCORE  0', {
           fontSize: '13px', color: '#FFFFFF', fontStyle: 'bold'
         }).setDepth(10)
@@ -219,23 +225,23 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           callback: () => {
             if (this.isGameOver) return
             if (Phaser.Math.Between(0, 1) === 0) {
-              const o = this.obstacles.create(510, 575, 'obsH')
+              const o = this.obstacles.create(510, 703, 'obsH')
               o.setDisplaySize(38, 50)
               o.body.setSize(28, 42)
               o.body.allowGravity = false
               o.setVelocityX(-this.obstacleSpeed)
               o.obsType = 'high'
               o.setDepth(4)
-              this.lastObstacleY = 575
+              this.lastObstacleY = 703
             } else {
-              const o = this.obstacles.create(510, 548, 'obsL')
+              const o = this.obstacles.create(510, 676, 'obsL')
               o.setDisplaySize(90, 22)
               o.body.setSize(74, 14)
               o.body.allowGravity = false
               o.setVelocityX(-this.obstacleSpeed)
               o.obsType = 'low'
               o.setDepth(4)
-              this.lastObstacleY = 548
+              this.lastObstacleY = 676
             }
             this.lastObstacleSpawnTime = this.time.now
           },
@@ -252,19 +258,18 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             const nearbyObs = (this.obstacles.getChildren() as any[])
               .filter((o: any) => o.x > 260 && o.x < 530)
 
-            // Always keep coins above the obstacle danger zone (y > 520)
+            // Always keep coins above the obstacle danger zone
             const coinY = nearbyObs.length > 0
-              ? Phaser.Math.Between(445, 475)   // obstacle nearby → force jump-height coin
-              : Phaser.Math.Between(460, 510)   // no obstacle → comfortable mid-air coin
+              ? Phaser.Math.Between(573, 603)   // obstacle nearby → force jump-height coin
+              : Phaser.Math.Between(588, 638)   // no obstacle → comfortable mid-air coin
 
             const c = this.coins.create(510, coinY, 'coin')
             c.setDisplaySize(28, 28)
             c.setDepth(4)
             c.body.allowGravity = false
             c.setVelocityX(-this.obstacleSpeed)
+            // Single bounce tween only — rotate/scale tweens skipped for mobile performance
             this.tweens.add({ targets: c, y: c.y - 10, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-            this.tweens.add({ targets: c, angle: 360, duration: 2000, repeat: -1, ease: 'Linear' })
-            this.tweens.add({ targets: c, scaleX: 1.1, scaleY: 1.1, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
           },
           loop: true
         })
@@ -276,7 +281,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             if (this.isGameOver) return
             const types = ['powerShield', 'powerMagnet', 'powerSlow', 'power2x']
             const randomType = Phaser.Math.RND.pick(types)
-            const p = this.powerups.create(510, Phaser.Math.Between(450, 520), randomType)
+            const p = this.powerups.create(510, Phaser.Math.Between(578, 648), randomType)
             p.setDisplaySize(35, 35)
             p.setDepth(4)
             p.body.allowGravity = false
@@ -342,19 +347,20 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           const flash = this.add.circle(coinX, coinY, 16, 0xFFDD44, 0.75).setDepth(6)
           this.tweens.add({ targets: flash, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 220, onComplete: () => flash.destroy() })
 
-          // Particle burst — Base blue + gold + white mix
+          // Lightweight particle burst — no physics bodies, tween-only (mobile-friendly)
           const burstColors = [0xFFCC00, 0x0052FF, 0xFFFFFF, 0xFFDD44, 0x1A6EFF]
-          for (let i = 0; i < 12; i++) {
-            const angle = (Math.PI * 2 * i) / 12
-            const speed = Phaser.Math.Between(120, 260)
+          const pCount = this.isMobile ? 5 : 8
+          for (let i = 0; i < pCount; i++) {
+            const angle = (Math.PI * 2 * i) / pCount
+            const dist = Phaser.Math.Between(40, 80)
             const color = burstColors[i % burstColors.length]
-            const particle = this.add.circle(coinX, coinY, Phaser.Math.Between(2, 5), color, 0.92).setDepth(5)
-            this.physics.add.existing(particle)
-            particle.body.allowGravity = false
-            particle.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed)
+            const particle = this.add.circle(coinX, coinY, Phaser.Math.Between(2, 4), color, 0.9).setDepth(5)
             this.tweens.add({
-              targets: particle, alpha: 0, scaleX: 0.15, scaleY: 0.15,
-              duration: 350, onComplete: () => particle.destroy()
+              targets: particle,
+              x: coinX + Math.cos(angle) * dist,
+              y: coinY + Math.sin(angle) * dist,
+              alpha: 0, scaleX: 0.1, scaleY: 0.1,
+              duration: 300, onComplete: () => particle.destroy()
             })
           }
 
@@ -489,7 +495,12 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         this.score += 0.08 * this.speedMultiplier
         this.gameTime += delta
-        this.scoreText.setText('SCORE  ' + Math.floor(this.score))
+        // Only call setText when the integer value actually changes (saves CPU every frame)
+        const scoreInt = Math.floor(this.score)
+        if (scoreInt !== this.lastScoreDisplay) {
+          this.lastScoreDisplay = scoreInt
+          this.scoreText.setText('SCORE  ' + scoreInt)
+        }
 
         if (this.obstacleSpeed < this.maxSpeed) {
           this.obstacleSpeed += this.speedIncrease
@@ -522,9 +533,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.fogPool?.forEach((fog: any) => {
           fog.x -= fog.driftSpd * Math.min(this.speedMultiplier, 2)
           fog.y -= 0.06
-          if (fog.x < -120 || fog.y < 578) {
+          if (fog.x < -120 || fog.y < 706) {
             fog.x = 490 + Phaser.Math.Between(0, 100)
-            fog.y = 602 + Phaser.Math.Between(0, 16)
+            fog.y = 730 + Phaser.Math.Between(0, 16)
           }
         })
 
@@ -533,19 +544,19 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           dot.x -= dot.spd
           if (dot.x < -10) {
             dot.x = 490 + Phaser.Math.Between(0, 240)
-            dot.y = 600 + (Math.random() < 0.5 ? -1 : 2)
+            dot.y = 728 + (Math.random() < 0.5 ? -1 : 2)
           }
         })
 
-        if (this.speedMultiplier >= 2.5 && Math.random() < 0.03) {
+        if (this.speedMultiplier >= 2.5 && Math.random() < (this.isMobile ? 0.01 : 0.03)) {
           this.cameras.main.shake(50, 0.002)
         }
 
-        // Speed streaks — horizontal light trails at high speed
-        if (this.speedMultiplier >= 1.5 && Math.random() < 0.06 * (this.speedMultiplier - 1.0)) {
-          const sy = Phaser.Math.Between(80, 590)
+        // Speed streaks — horizontal light trails at high speed (desktop only, less frequent)
+        if (!this.isMobile && this.speedMultiplier >= 2.0 && Math.random() < 0.03 * (this.speedMultiplier - 1.5)) {
+          const sy = Phaser.Math.Between(80, 710)
           const sw = Phaser.Math.Between(25, 70)
-          const alpha = Phaser.Math.FloatBetween(0.15, 0.40)
+          const alpha = Phaser.Math.FloatBetween(0.15, 0.35)
           const col = Math.random() < 0.5 ? 0x00FFFF : 0x0088FF
           const streak = this.add.rectangle(490 + sw / 2, sy, sw, 1, col, alpha).setDepth(1)
           this.tweens.add({

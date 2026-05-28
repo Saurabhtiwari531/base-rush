@@ -7,6 +7,7 @@ export function createTextures(scene: any) {
     { y: 160, height: 160, color: 0x000722 },
     { y: 320, height: 160, color: 0x000f2c },
     { y: 480, height: 160, color: 0x001538 },
+    { y: 640, height: 128, color: 0x001A40 },
   ]
   colors.forEach(layer => {
     bg.fillStyle(layer.color, 1)
@@ -14,8 +15,8 @@ export function createTextures(scene: any) {
   })
   // Barely-visible horizontal scan grid (depth-of-field feel)
   bg.lineStyle(0.5, 0x0033AA, 0.06)
-  for (let y = 0; y < 640; y += 40) bg.lineBetween(0, y, 480, y)
-  bg.generateTexture('bg', 480, 640)
+  for (let y = 0; y < 768; y += 40) bg.lineBetween(0, y, 480, y)
+  bg.generateTexture('bg', 480, 768)
   bg.destroy()
 
   // ── PHYSICS GROUND (minimal — visual floor is handled by groundGrid tileSprite) ──
