@@ -15,14 +15,14 @@ export const metadata: Metadata = {
     description: "Run, jump, collect coins & save your score on Base blockchain. Play free at baserush.fun",
     url: "https://baserush.fun",
     siteName: "Base Rush",
-    images: [{ url: "/base-rush-icon.png", width: 512, height: 512, alt: "Base Rush Game" }],
+    images: [{ url: "/base-rush-icon.png?v=2", width: 512, height: 512, alt: "Base Rush Game" }],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Base Rush — On-Chain Endless Runner",
     description: "Run, jump, collect coins & save your score on Base blockchain 🤖⚡",
-    images: ["https://baserush.fun/base-rush-icon.png"],
+    images: ["https://baserush.fun/base-rush-icon.png?v=2"],
   },
   manifest: "/manifest.json",
 };
