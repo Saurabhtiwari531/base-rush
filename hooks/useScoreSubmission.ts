@@ -5,7 +5,16 @@ import type { RefObject } from 'react'
 import { useConnection, useConnect, useConnectors, useDisconnect, useSwitchChain } from 'wagmi'
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { base } from 'wagmi/chains'
+import { Attribution } from 'ox/erc8021'
 import { CONTRACT_ADDRESS, CONTRACT_ABI, LeaderboardEntry } from '../lib/contract'
+
+// ── BUILDER CODE ATTRIBUTION (ERC-8021) ─────────────────────────────────────
+// Get your code: base.dev → Settings → Builder Code
+// Set NEXT_PUBLIC_BUILDER_CODE=bc_xxxxxxxx in your .env.local / Vercel env vars
+const BUILDER_CODE = process.env.NEXT_PUBLIC_BUILDER_CODE
+const DATA_SUFFIX = BUILDER_CODE
+  ? Attribution.toDataSuffix({ codes: [BUILDER_CODE] })
+  : undefined
 
 export function useLeaderboard() {
   const { data, refetch, isLoading } = useReadContract({
@@ -123,6 +132,7 @@ export function useScoreSubmission() {
         abi: CONTRACT_ABI,
         functionName: 'submitScore',
         args: [BigInt(Math.floor(score))],
+        ...(DATA_SUFFIX && { dataSuffix: DATA_SUFFIX }),
       })
     } catch {
       setTxPending(false)
