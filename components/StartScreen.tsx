@@ -14,7 +14,7 @@ export function StartScreen({ onStart, isConnected, address, onConnect, personal
     <div style={{
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      minHeight: '100vh', width: '100%',
+      minHeight: '100dvh', width: '100%',
       background: 'radial-gradient(ellipse at top, #0a0a2e 0%, #000000 60%)',
       padding: '20px',
       fontFamily: '"Courier New", monospace',

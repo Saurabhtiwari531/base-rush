@@ -177,6 +177,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }).setDepth(10)
 
         this.speedMultiplier = 1.0
+        this.lastSpeedDisplay = '1.0'
         this.speedText = this.add.text(466, 40, 'SPEED 1.0x', {
           fontSize: '13px', color: '#00FFFF', fontStyle: 'bold',
           stroke: '#000033', strokeThickness: 3
@@ -437,20 +438,26 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.slideLockedY = this.basey.y
           this.basey.setScale(1.4, 0.4)
           this.basey.setY(this.slideLockedY + 18)
+          // FIX: shrink physics hitbox to bottom strip so low obstacles don't hit during slide
+          // Sprite is 48×60; body (34×18) offset to bottom 18px keeps feet colliding with ground
+          this.basey.body.setSize(34, 18, false)
+          this.basey.body.setOffset(7, 40)
           // Slow-mo mein obstacle zyada der lagta hai pass hone mein — slide extend karo
           const slideDuration = this.activeSlowMo ? 950 : 600
           this.time.delayedCall(slideDuration, () => {
             this.isSliding = false
             this.basey.setScale(1, 1)
-            this.basey.body.setSize(34, 56)
+            // Restore full hitbox (centred on 48×60 sprite)
+            this.basey.body.setSize(34, 56, false)
+            this.basey.body.setOffset(7, 2)
             this.basey.setY(this.slideLockedY)
             this.slideLockedY = null
           })
         }
 
-        this.input.keyboard.on('keydown-SPACE', doJump)
-        this.input.keyboard.on('keydown-UP', doJump)
-        this.input.keyboard.on('keydown-DOWN', doSlide)
+        this.input.keyboard?.on('keydown-SPACE', doJump)
+        this.input.keyboard?.on('keydown-UP', doJump)
+        this.input.keyboard?.on('keydown-DOWN', doSlide)
 
         // Expose to React so the full-screen container can forward touches
         ;(window as any).gameJumpInput = doJump
@@ -506,12 +513,15 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.obstacleSpeed += this.speedIncrease
           this.speedMultiplier = Math.min(4.0, this.obstacleSpeed / 400)
           const speedStr = this.speedMultiplier.toFixed(1)
-          this.speedText.setText(`SPEED ${speedStr}x`)
-
-          if (this.speedMultiplier >= 3.0) this.speedText.setColor('#FF0000')
-          else if (this.speedMultiplier >= 2.0) this.speedText.setColor('#FF00FF')
-          else if (this.speedMultiplier >= 1.5) this.speedText.setColor('#FFFF00')
-          else this.speedText.setColor('#00FFFF')
+          // Only call setText when displayed value actually changes (saves CPU every frame)
+          if (speedStr !== this.lastSpeedDisplay) {
+            this.lastSpeedDisplay = speedStr
+            this.speedText.setText(`SPEED ${speedStr}x`)
+            if (this.speedMultiplier >= 3.0) this.speedText.setColor('#FF0000')
+            else if (this.speedMultiplier >= 2.0) this.speedText.setColor('#FF00FF')
+            else if (this.speedMultiplier >= 1.5) this.speedText.setColor('#FFFF00')
+            else this.speedText.setColor('#00FFFF')
+          }
 
           this.obstacles.getChildren().forEach((o: any) => { o.setVelocityX(-this.obstacleSpeed) })
           this.coins.getChildren().forEach((c: any) => { c.setVelocityX(-this.obstacleSpeed) })

@@ -27,14 +27,14 @@ type Props = {
 
 function walletIcon(id: string) {
   if (id === 'metaMask' || id === 'io.metamask') return '🦊'
-  if (id === 'coinbaseWalletSDK') return '🔵'
+  if (id === 'coinbaseWalletSDK' || id === 'coinbaseWallet' || id === 'base') return '🔵'
   return '💼'
 }
 
 function walletColor(id: string) {
   if (id === 'metaMask' || id === 'io.metamask') return '#FF6B00'
-  if (id === 'coinbaseWalletSDK') return '#0052FF'
-  return '#444466'
+  if (id === 'coinbaseWalletSDK' || id === 'coinbaseWallet' || id === 'base') return '#0052FF'
+  return '#334466'
 }
 
 export function GameOver({
@@ -44,12 +44,15 @@ export function GameOver({
   submitScoreToChain, handleRetryTransaction, onPlayAgain, onSkipAndReplay, onGoHome
 }: Props) {
 
-  // De-duplicate: injected + metaMask often point to same wallet
-  const uniqueConnectors = connectors.filter((c, _i, arr) =>
-    c.id === 'injected'
-      ? !arr.some(x => x.id !== 'injected' && x.name === c.name)
-      : true
-  )
+  // De-duplicate: injected + metaMask often point to same wallet;
+  // also collapse coinbaseWallet + coinbaseWalletSDK which both appear on Coinbase browser
+  const cbIds = new Set(['coinbaseWalletSDK', 'coinbaseWallet', 'base'])
+  let seenCb = false
+  const uniqueConnectors = connectors.filter((c, _i, arr) => {
+    if (c.id === 'injected') return !arr.some(x => x.id !== 'injected' && x.name === c.name)
+    if (cbIds.has(c.id)) { if (seenCb) return false; seenCb = true }
+    return true
+  })
 
   return (
     <div style={{
