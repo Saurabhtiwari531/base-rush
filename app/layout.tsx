@@ -7,12 +7,22 @@ import { Providers } from './providers'
 import { Analytics } from '@vercel/analytics/react'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://baserush.fun'),
   title: "Base Rush",
   description: "Web3 Runner Game on Base",
   openGraph: {
-    title: "Base Rush",
-    description: "Web3 Endless Runner Game on Base",
-    images: [{ url: "/base-rush-icon.png", width: 512, height: 512 }],
+    title: "Base Rush — On-Chain Endless Runner",
+    description: "Run, jump, collect coins & save your score on Base blockchain. Play free at baserush.fun",
+    url: "https://baserush.fun",
+    siteName: "Base Rush",
+    images: [{ url: "/base-rush-icon.png", width: 512, height: 512, alt: "Base Rush Game" }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Base Rush — On-Chain Endless Runner",
+    description: "Run, jump, collect coins & save your score on Base blockchain 🤖⚡",
+    images: ["https://baserush.fun/base-rush-icon.png"],
   },
   manifest: "/manifest.json",
 };
