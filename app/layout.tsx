@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { cookies } from 'next/headers'
+import { cookieToInitialState } from 'wagmi'
+import { wagmiConfig } from '../lib/wagmi'
 import { Providers } from './providers'
 import { Analytics } from '@vercel/analytics/react'
 
@@ -22,18 +25,27 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Read wagmi state from cookie on the server — passed to WagmiProvider as
+  // initialState so the first client render matches (no hydration mismatch)
+  const cookieStore = await cookies()
+  const initialState = cookieToInitialState(
+    wagmiConfig,
+    cookieStore.get('wagmi.store')?.value
+  )
+
   return (
     <html lang="en">
       <head>
+        {/* Required for Base app store listing */}
         <meta name="base:app_id" content="6a1553a25ef088574244918b" />
       </head>
       <body>
-        <Providers>
+        <Providers initialState={initialState}>
           {children}
         </Providers>
         <Analytics />
