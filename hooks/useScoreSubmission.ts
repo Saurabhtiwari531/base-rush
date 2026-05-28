@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { RefObject } from 'react'
 import { useConnection, useConnect, useConnectors, useDisconnect, useSwitchChain } from 'wagmi'
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
-import { baseSepolia } from 'wagmi/chains'
+import { base } from 'wagmi/chains'
 import { CONTRACT_ADDRESS, CONTRACT_ABI, LeaderboardEntry } from '../lib/contract'
 
 export function useLeaderboard() {
@@ -102,11 +102,11 @@ export function useScoreSubmission() {
       return
     }
 
-    if (chainId !== baseSepolia.id) {
+    if (chainId !== base.id) {
       try {
-        await switchChainAsync({ chainId: baseSepolia.id })
+        await switchChainAsync({ chainId: base.id })
       } catch {
-        setTxError('Please switch to Base Sepolia network to submit score.')
+        setTxError('Please switch to Base Mainnet to submit score.')
         return
       }
     }

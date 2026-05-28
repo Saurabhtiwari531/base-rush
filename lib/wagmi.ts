@@ -10,15 +10,15 @@ const sepoliaRpc = process.env.NEXT_PUBLIC_RPC_SEPOLIA
 const baseRpc = process.env.NEXT_PUBLIC_RPC_BASE
 
 export const wagmiConfig = createConfig({
-  chains: [baseSepolia, base],
+  chains: [base, baseSepolia],
   connectors: [
     injected(),                                    // auto-detects any browser wallet
     metaMask(),                                    // explicit MetaMask
     coinbaseWallet({ appName: 'Base Rush' }),      // Base app / Coinbase Wallet
   ],
   transports: {
+    [base.id]: baseRpc ? http(baseRpc) : http('https://mainnet.base.org'),
     [baseSepolia.id]: sepoliaRpc ? http(sepoliaRpc) : http(),
-    [base.id]: baseRpc ? http(baseRpc) : http(),
   },
 })
 

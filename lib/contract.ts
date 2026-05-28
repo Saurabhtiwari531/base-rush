@@ -5,7 +5,7 @@ export type LeaderboardEntry = {
   reward: string
 }
 
-export const CONTRACT_ADDRESS = '0xd1F19e198d74D7F43021599799D1e4a2A85Dcd40'
+export const CONTRACT_ADDRESS = '0x71e8F01ec255E50Fa0143E0675b8B0dcC02cb6c1'
 
 export const CONTRACT_ABI = [
   {
