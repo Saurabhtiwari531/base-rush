@@ -42,6 +42,13 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         // ── BACKGROUND ──────────────────────────────────────────────────────
         this.add.image(240, 384, 'bg').setDepth(0)
+        // Speed-based theme overlays (fade in at 1.5x / 2x / 3x)
+        this.themeOverlays = [
+          this.add.rectangle(240, 384, 480, 768, 0x330066, 0).setDepth(0.75), // purple 1.5x
+          this.add.rectangle(240, 384, 480, 768, 0x550011, 0).setDepth(0.75), // red 2.0x
+          this.add.rectangle(240, 384, 480, 768, 0x003311, 0).setDepth(0.75), // green 3.0x
+        ]
+        this.lastTheme = 0
 
         // Parallax circuit layer (depth 0.5, very faint — scrolls 8× slower)
         this.bgCircuit = this.add.tileSprite(240, 428, 480, 688, 'bgCircuit')
@@ -214,6 +221,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.isGameOver = false
         this.isSliding = false
         this.gameTime = 0
+        this.jumpCount = 0
+        this.lastMilestone = 0
 
         createAudio(this)
         createPowerUps(this)
@@ -225,7 +234,20 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           delay: 1600,
           callback: () => {
             if (this.isGameOver) return
-            if (Phaser.Math.Between(0, 1) === 0) {
+            const hasDrones = this.gameTime > 25000
+            const roll = Phaser.Math.Between(0, hasDrones ? 4 : 3)
+            if (hasDrones && roll >= 4) {
+              // Flying drone — player must SLIDE under it
+              const o = this.obstacles.create(510, 660, 'obsDrone')
+              o.setDisplaySize(50, 28)
+              o.body.setSize(28, 13)
+              o.body.allowGravity = false
+              o.setVelocityX(-this.obstacleSpeed)
+              o.obsType = 'drone'
+              o.setDepth(4)
+              this.lastObstacleY = 660
+              this.tweens.add({ targets: o, y: o.y - 10, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+            } else if (roll <= 1) {
               const o = this.obstacles.create(510, 703, 'obsH')
               o.setDisplaySize(38, 50)
               o.body.setSize(28, 42)
@@ -330,7 +352,24 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             this.livesText.setText('🖤 🖤 🖤')
             this.isGameOver = true
             this.physics.pause()
-            this.basey.setTint(0xFF0000)
+            // Explosion burst
+            const dc = [0xFF4444, 0xFF8800, 0xFFFF00, 0xFF0088, 0x00CCFF, 0xFFFFFF]
+            for (let i = 0; i < 24; i++) {
+              const a = (Math.PI * 2 * i) / 24
+              const dist = Phaser.Math.Between(55, 170)
+              const ep = this.add.circle(
+                this.basey.x, this.basey.y,
+                Phaser.Math.Between(3, 9), dc[i % dc.length], 1.0
+              ).setDepth(15)
+              this.tweens.add({ targets: ep,
+                x: this.basey.x + Math.cos(a) * dist,
+                y: this.basey.y + Math.sin(a) * dist,
+                alpha: 0, scaleX: 0.1, scaleY: 0.1,
+                duration: Phaser.Math.Between(400, 850),
+                onComplete: () => ep.destroy() })
+            }
+            this.cameras.main.flash(350, 255, 60, 60)
+            this.tweens.add({ targets: this.basey, angle: 360, scaleX: 0, scaleY: 0, alpha: 0, duration: 650 })
             if (!this.scoreSubmitted) {
               this.scoreSubmitted = true
               ;(window as any).handleGameOver?.(this.score)
@@ -425,9 +464,28 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
 
         const doJump = () => {
-          if (this.basey.body.blocked.down && !this.isGameOver) {
+          if (this.isGameOver) return
+          if (this.basey.body.blocked.down) {
             this.basey.setVelocityY(-650)
+            this.jumpCount = 1
             jumpEffect()
+            this.playJumpSound()
+          } else if (this.jumpCount === 1) {
+            // Double jump — slightly weaker, pink ring burst
+            this.basey.setVelocityY(-520)
+            this.jumpCount = 2
+            for (let i = 0; i < 10; i++) {
+              const a = (Math.PI * 2 * i) / 10
+              const p = this.add.circle(
+                this.basey.x + Math.cos(a) * 10,
+                this.basey.y + Math.sin(a) * 10,
+                3, 0xFF00FF, 0.9
+              ).setDepth(5)
+              this.tweens.add({ targets: p,
+                x: this.basey.x + Math.cos(a) * 34,
+                y: this.basey.y + Math.sin(a) * 34,
+                alpha: 0, duration: 320, onComplete: () => p.destroy() })
+            }
             this.playJumpSound()
           }
         }
@@ -500,6 +558,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.basey.body.velocity.y = 0
         }
 
+        // Reset double jump when landing
+        if (this.basey.body.blocked.down) this.jumpCount = 0
+
         this.score += 0.08 * this.speedMultiplier
         this.gameTime += delta
         // Only call setText when the integer value actually changes (saves CPU every frame)
@@ -507,6 +568,19 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         if (scoreInt !== this.lastScoreDisplay) {
           this.lastScoreDisplay = scoreInt
           this.scoreText.setText('SCORE  ' + scoreInt)
+          // Milestone celebration
+          const milestones = [500, 1000, 2000, 5000, 10000]
+          const hit = milestones.find(m => m > this.lastMilestone && scoreInt >= m)
+          if (hit) {
+            this.lastMilestone = hit
+            const msg = this.add.text(240, 360, `🎯 ${hit.toLocaleString()}!`, {
+              fontSize: '28px', color: '#FFD700', fontStyle: 'bold',
+              stroke: '#000000', strokeThickness: 5
+            }).setOrigin(0.5).setDepth(20)
+            this.cameras.main.flash(220, 255, 215, 0)
+            this.tweens.add({ targets: msg, y: 260, scaleX: 1.2, scaleY: 1.2, alpha: 0,
+              duration: 1400, ease: 'Power2', onComplete: () => msg.destroy() })
+          }
         }
 
         if (this.obstacleSpeed < this.maxSpeed) {
@@ -526,6 +600,15 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.obstacles.getChildren().forEach((o: any) => { o.setVelocityX(-this.obstacleSpeed) })
           this.coins.getChildren().forEach((c: any) => { c.setVelocityX(-this.obstacleSpeed) })
           this.powerups.getChildren().forEach((p: any) => { p.setVelocityX(-this.obstacleSpeed) })
+
+          // Background theme shift
+          const newTheme = this.speedMultiplier >= 3.0 ? 3 : this.speedMultiplier >= 2.0 ? 2 : this.speedMultiplier >= 1.5 ? 1 : 0
+          if (newTheme !== this.lastTheme) {
+            this.lastTheme = newTheme
+            this.themeOverlays.forEach((ov: any, i: number) => {
+              this.tweens.add({ targets: ov, alpha: newTheme === i + 1 ? 0.22 : 0, duration: 2200 })
+            })
+          }
         }
 
         this.stars?.forEach((star: any) => {

@@ -330,4 +330,44 @@ export function createTextures(scene: any) {
   ol.fillCircle(85, 17, 3)
   ol.generateTexture('obsL', 90, 22)
   ol.destroy()
+
+  // Flying enemy drone — forces player to SLIDE under it
+  const dg = scene.make.graphics({ x: 0, y: 0, add: false })
+  // Rotor glow halo
+  dg.fillStyle(0x0088FF, 0.18)
+  dg.fillCircle(9, 6, 11)
+  dg.fillCircle(41, 6, 11)
+  // Rotor discs
+  dg.fillStyle(0x002244, 1)
+  dg.fillEllipse(9, 6, 16, 8)
+  dg.fillEllipse(41, 6, 16, 8)
+  dg.lineStyle(1.5, 0x00CCFF, 1)
+  dg.strokeEllipse(9, 6, 16, 8)
+  dg.strokeEllipse(41, 6, 16, 8)
+  // Rotor cross blades
+  dg.lineStyle(1, 0x00FFFF, 0.7)
+  dg.lineBetween(2, 6, 16, 6)
+  dg.lineBetween(9, 2, 9, 11)
+  dg.lineBetween(34, 6, 48, 6)
+  dg.lineBetween(41, 2, 41, 11)
+  // Main body
+  dg.fillStyle(0x000E22, 1)
+  dg.fillRoundedRect(13, 9, 24, 13, 4)
+  dg.lineStyle(2, 0x00FFFF, 1)
+  dg.strokeRoundedRect(13, 9, 24, 13, 4)
+  // Body centre stripe
+  dg.lineStyle(1, 0x0055AA, 0.6)
+  dg.lineBetween(16, 15, 36, 15)
+  // Threatening red scanner eye
+  dg.fillStyle(0xFF0000, 1)
+  dg.fillCircle(25, 15, 4)
+  dg.fillStyle(0xFF8888, 0.8)
+  dg.fillCircle(24, 14, 1.5)
+  // Thruster glow underneath
+  dg.fillStyle(0x00FFFF, 0.45)
+  dg.fillEllipse(18, 25, 7, 4)
+  dg.fillEllipse(25, 27, 7, 4)
+  dg.fillEllipse(32, 25, 7, 4)
+  dg.generateTexture('obsDrone', 50, 28)
+  dg.destroy()
 }
