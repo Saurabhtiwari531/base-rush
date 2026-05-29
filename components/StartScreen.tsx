@@ -139,8 +139,8 @@ export function StartScreen({ onStart, isConnected, address, onConnect, personal
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
             {[
               { key: 'SPACE / ↑ / Tap', action: 'Jump' },
-              { key: '← → / Swipe L/R', action: 'Switch Lane' },
               { key: 'DOWN / Swipe ↓', action: 'Slide' },
+              { key: '🔥 Combo', action: 'Chain coins' },
               { key: '🎁 Drops', action: 'Power-ups' },
             ].map(c => (
               <div key={c.action} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

@@ -40,13 +40,6 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         const isMobile = window.innerWidth < 600
         this.isMobile = isMobile
 
-        // 3-lane system: top=0, middle=1, bottom=2
-        this.LANE_GROUND_Y = [450, 600, 748]
-        this.LANE_PLAYER_REST_Y = [402, 552, 700]
-        this.currentLane = 2
-        this.isChangingLane = false
-        this.laneChangeInvulTime = 0
-
         // ── BACKGROUND ──────────────────────────────────────────────────────
         this.add.image(240, 384, 'bg').setDepth(0)
 
@@ -69,18 +62,11 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.stars.push(star)
         }
 
-        // ── PHYSICS GROUNDS — one per lane ──────────────────────────────────
-        this.laneGrounds = this.LANE_GROUND_Y.map((gy: number, i: number) => {
-          const g = this.physics.add.staticImage(240, gy, 'ground')
-          g.setDisplaySize(480, 40)
-          g.refreshBody()
-          g.setDepth(2)
-          if (i < 2) g.setAlpha(0)
-          return g
-        })
-        // Subtle lane divider lines (visual only)
-        this.add.rectangle(240, 428, 480, 2, 0x003388, 0.28).setDepth(2.4)
-        this.add.rectangle(240, 578, 480, 2, 0x003388, 0.28).setDepth(2.4)
+        // ── PHYSICS GROUND ───────────────────────────────────────────────────
+        this.ground = this.physics.add.staticImage(240, 748, 'ground')
+        this.ground.setDisplaySize(480, 40)
+        this.ground.refreshBody()
+        this.ground.setDepth(2)
 
         // ── FLOOR UPLIGHT (subtle blue wash rising from ground into sky) ─────
         this.add.rectangle(240, 710, 480, 32, 0x001844, 0.14).setDepth(0.9)
@@ -180,9 +166,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.basey.body.setSize(34, 56)
         this.basey.setBounce(0)
         this.basey.setCollideWorldBounds(true)
-        this.laneGrounds.forEach((g: any, i: number) => {
-          this.physics.add.collider(this.basey, g, null, () => !this.isChangingLane && this.currentLane === i, this)
-        })
+        this.physics.add.collider(this.basey, this.ground)
 
         this.baseyGlow = this.add.circle(80, 718, 26, 0xFFFFFF, 0.08).setDepth(1)
 
@@ -241,28 +225,24 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           delay: 1600,
           callback: () => {
             if (this.isGameOver) return
-            const obsLane = Phaser.Math.Between(0, 2)
-            const restY = this.LANE_PLAYER_REST_Y[obsLane]
             if (Phaser.Math.Between(0, 1) === 0) {
-              const o = this.obstacles.create(510, restY + 3, 'obsH')
+              const o = this.obstacles.create(510, 703, 'obsH')
               o.setDisplaySize(38, 50)
               o.body.setSize(28, 42)
               o.body.allowGravity = false
               o.setVelocityX(-this.obstacleSpeed)
               o.obsType = 'high'
-              o.lane = obsLane
               o.setDepth(4)
-              this.lastObstacleY = restY + 3
+              this.lastObstacleY = 703
             } else {
-              const o = this.obstacles.create(510, restY - 24, 'obsL')
+              const o = this.obstacles.create(510, 676, 'obsL')
               o.setDisplaySize(90, 22)
               o.body.setSize(74, 14)
               o.body.allowGravity = false
               o.setVelocityX(-this.obstacleSpeed)
               o.obsType = 'low'
-              o.lane = obsLane
               o.setDepth(4)
-              this.lastObstacleY = restY - 24
+              this.lastObstacleY = 676
             }
             this.lastObstacleSpawnTime = this.time.now
           },
@@ -274,12 +254,22 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           delay: 1800,
           callback: () => {
             if (this.isGameOver) return
-            const coinLane = Phaser.Math.Between(0, 2)
-            const c = this.coins.create(510, this.LANE_PLAYER_REST_Y[coinLane] - 30, 'coin')
+
+            // Wider detection zone: 260–530 catches obstacles at spawn point too
+            const nearbyObs = (this.obstacles.getChildren() as any[])
+              .filter((o: any) => o.x > 260 && o.x < 530)
+
+            // Always keep coins above the obstacle danger zone
+            const coinY = nearbyObs.length > 0
+              ? Phaser.Math.Between(573, 603)   // obstacle nearby → force jump-height coin
+              : Phaser.Math.Between(588, 638)   // no obstacle → comfortable mid-air coin
+
+            const c = this.coins.create(510, coinY, 'coin')
             c.setDisplaySize(28, 28)
             c.setDepth(4)
             c.body.allowGravity = false
             c.setVelocityX(-this.obstacleSpeed)
+            // Single bounce tween only — rotate/scale tweens skipped for mobile performance
             this.tweens.add({ targets: c, y: c.y - 10, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
           },
           loop: true
@@ -292,8 +282,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             if (this.isGameOver) return
             const types = ['powerShield', 'powerMagnet', 'powerSlow', 'power2x']
             const randomType = Phaser.Math.RND.pick(types)
-            const puLane = Phaser.Math.Between(0, 2)
-            const p = this.powerups.create(510, this.LANE_PLAYER_REST_Y[puLane] - 30, randomType)
+            const p = this.powerups.create(510, Phaser.Math.Between(578, 648), randomType)
             p.setDisplaySize(35, 35)
             p.setDepth(4)
             p.body.allowGravity = false
@@ -308,7 +297,6 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         // Obstacle hit
         this.physics.add.overlap(this.basey, this.obstacles, (_b: any, obs: any) => {
           if (this.isGameOver) return
-          if (this.time.now < this.laneChangeInvulTime) return
           obs.destroy()
 
           if (this.activeShield) {
@@ -424,29 +412,6 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.tweens.add({ targets: notif, y: 60, alpha: 0, duration: 2000, ease: 'Power2', onComplete: () => notif.destroy() })
         })
 
-        // Lane switch — tween player to adjacent lane
-        const switchLane = (dir: -1 | 1) => {
-          if (this.isChangingLane || this.isGameOver || this.isSliding) return
-          if (!this.basey.body.blocked.down) return
-          const newLane = this.currentLane + dir
-          if (newLane < 0 || newLane > 2) return
-          this.isChangingLane = true
-          this.currentLane = newLane
-          this.laneChangeInvulTime = this.time.now + 280
-          this.basey.body.allowGravity = false
-          this.basey.body.setVelocity(0, 0)
-          this.tweens.add({
-            targets: this.basey,
-            y: this.LANE_PLAYER_REST_Y[newLane],
-            duration: 180,
-            ease: 'Power2.easeInOut',
-            onComplete: () => {
-              this.basey.body.allowGravity = true
-              this.isChangingLane = false
-            }
-          })
-        }
-
         // Jump effect
         const jumpEffect = () => {
           for (let i = 0; i < 8; i++) {
@@ -493,16 +458,10 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.input.keyboard?.on('keydown-SPACE', doJump)
         this.input.keyboard?.on('keydown-UP', doJump)
         this.input.keyboard?.on('keydown-DOWN', doSlide)
-        this.input.keyboard?.on('keydown-LEFT', () => switchLane(-1))
-        this.input.keyboard?.on('keydown-A', () => switchLane(-1))
-        this.input.keyboard?.on('keydown-RIGHT', () => switchLane(1))
-        this.input.keyboard?.on('keydown-D', () => switchLane(1))
 
         // Expose to React so the full-screen container can forward touches
         ;(window as any).gameJumpInput = doJump
         ;(window as any).gameSlideInput = doSlide
-        ;(window as any).gameLaneLeftInput = () => switchLane(-1)
-        ;(window as any).gameLaneRightInput = () => switchLane(1)
 
         let sx = 0, sy = 0
         this.input.on('pointerdown', (p: any) => { sx = p.x; sy = p.y })
@@ -513,9 +472,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           const adx = Math.abs(dx)
           const ady = Math.abs(dy)
           if (adx < 15 && ady < 15) doJump()
-          else if (adx > ady && adx > 30) { if (dx < 0) switchLane(-1); else switchLane(1) }
-          else if (dy < 0) doJump()
-          else doSlide()
+          else if (ady > adx) { if (dy < 0) doJump(); else doSlide() }
         })
 
         this.runFrame = 0
