@@ -18,6 +18,9 @@ export default function Home() {
   const [isGameOver, setIsGameOver] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [runStats, setRunStats] = useState<{
+    distance: number; coins: number; topCombo: number; duration: number; topSpeed: number
+  } | null>(null)
 
   const {
     address, isConnected, disconnect,
@@ -46,9 +49,9 @@ export default function Home() {
     }
   }, [finalScore, isGameOver])
 
-  // Reset isNewBest when starting a new game
+  // Reset isNewBest + stats when starting a new game
   useEffect(() => {
-    if (gameStarted) resetNewBest()
+    if (gameStarted) { resetNewBest(); setRunStats(null) }
   }, [gameStarted])
 
   // Phaser game init
@@ -70,6 +73,7 @@ export default function Home() {
       if (game) {
         try {
           const scene = game.scene.scenes[0]
+          scene?.stopBGM?.()
           if (scene?.audioCtx) scene.audioCtx.close()
         } catch (e) {}
         game.destroy(true)
@@ -82,8 +86,9 @@ export default function Home() {
 
   // React ↔ Phaser bridge
   useEffect(() => {
-    ;(window as any).handleGameOver = (score: number) => {
+    ;(window as any).handleGameOver = (score: number, stats?: any) => {
       setIsGameOver(true)
+      if (stats) setRunStats(stats)
       setTimeout(() => { submitScoreToChain(score) }, 100)
     }
     ;(window as any).gameReady = () => { setGameLoading(false) }
@@ -130,6 +135,7 @@ export default function Home() {
     if (gameInstanceRef.current) {
       try {
         const scene = gameInstanceRef.current.scene?.scenes?.[0]
+        scene?.stopBGM?.()
         if (scene?.audioCtx) scene.audioCtx.close()
       } catch (_) {}
       gameInstanceRef.current.destroy(true)
@@ -338,6 +344,7 @@ export default function Home() {
               onPlayAgain={onPlayAgain}
               onSkipAndReplay={onSkipAndReplay}
               onGoHome={onGoHome}
+              runStats={runStats}
             />
           )}
         </div>

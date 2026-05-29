@@ -166,11 +166,12 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
         schedulePulse()
 
-        // HUD title — no box, neon blue text
-        this.add.text(240, 22, 'BASE RUSH', {
-          fontSize: '16px', color: '#4488FF', fontStyle: 'bold', letterSpacing: 6,
-          stroke: '#000022', strokeThickness: 4,
-        }).setOrigin(0.5).setDepth(10)
+        // HUD: distance counter (center top) — replaces decorative title for live info
+        this.distanceText = this.add.text(240, 22, '0 m', {
+          fontSize: '15px', color: '#00FFAA', fontStyle: 'bold', letterSpacing: 3,
+          stroke: '#001133', strokeThickness: 4,
+        }).setOrigin(0.5, 0).setDepth(10)
+        this.lastDistDisplay = 0
 
         this.basey = this.physics.add.image(80, 683, 'b0').setDepth(4)
         this.basey.setDisplaySize(48, 60)
@@ -228,6 +229,10 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.gameTime = 0
         this.jumpCount = 0
         this.lastMilestone = 0
+        // Run stats (passed to GameOver)
+        this.distance = 0
+        this.coinsCollected = 0
+        this.topCombo = 0
 
         createAudio(this)
         createPowerUps(this)
@@ -377,9 +382,16 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             }
             this.cameras.main.flash(350, 255, 60, 60)
             this.tweens.add({ targets: this.basey, angle: 360, scaleX: 0, scaleY: 0, alpha: 0, duration: 650 })
+            this.stopBGM?.()
             if (!this.scoreSubmitted) {
               this.scoreSubmitted = true
-              ;(window as any).handleGameOver?.(this.score)
+              ;(window as any).handleGameOver?.(this.score, {
+                distance: Math.floor(this.distance),
+                coins: this.coinsCollected,
+                topCombo: this.topCombo,
+                duration: Math.floor(this.gameTime / 1000),
+                topSpeed: parseFloat(this.speedMultiplier.toFixed(1)),
+              })
             }
           }
         })
@@ -412,6 +424,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           }
 
           this.combo += 1
+          this.coinsCollected += 1
+          if (this.combo > this.topCombo) this.topCombo = this.combo
           let points = 10
           let multiplier = 1
           if (this.combo >= 10) { multiplier = 3; points = 30 }
@@ -552,6 +566,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         const nextCount = () => {
           if (ci >= countItems.length) {
             this.isCountingDown = false
+            this.startBGM?.()
             this.tweens.add({ targets: countdownDim, alpha: 0, duration: 250,
               onComplete: () => countdownDim.destroy() })
             return
@@ -611,6 +626,13 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         this.score += 0.08 * this.speedMultiplier
         this.gameTime += delta
+        // Distance: pixels travelled / 30 = meters (feels right for the canvas scale)
+        this.distance += (this.obstacleSpeed * delta) / (1000 * 30)
+        const distInt = Math.floor(this.distance)
+        if (distInt !== this.lastDistDisplay) {
+          this.lastDistDisplay = distInt
+          this.distanceText.setText(distInt + ' m')
+        }
         // Only call setText when the integer value actually changes (saves CPU every frame)
         const scoreInt = Math.floor(this.score)
         if (scoreInt !== this.lastScoreDisplay) {
