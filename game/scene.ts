@@ -42,13 +42,17 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         // ── BACKGROUND ──────────────────────────────────────────────────────
         this.add.image(240, 384, 'bg').setDepth(0)
-        // Speed-based theme overlays (fade in at 1.5x / 2x / 3x)
+        // Speed-based theme overlays (fade in at 1.2 / 1.5 / 2.0 / 3.0 / 3.5)
         this.themeOverlays = [
+          this.add.rectangle(240, 384, 480, 768, 0x553300, 0).setDepth(0.75), // sunset 1.2x
           this.add.rectangle(240, 384, 480, 768, 0x330066, 0).setDepth(0.75), // purple 1.5x
-          this.add.rectangle(240, 384, 480, 768, 0x550011, 0).setDepth(0.75), // red 2.0x
-          this.add.rectangle(240, 384, 480, 768, 0x003311, 0).setDepth(0.75), // green 3.0x
+          this.add.rectangle(240, 384, 480, 768, 0x550011, 0).setDepth(0.75), // crimson 2.0x
+          this.add.rectangle(240, 384, 480, 768, 0x003311, 0).setDepth(0.75), // toxic green 3.0x
+          this.add.rectangle(240, 384, 480, 768, 0x440099, 0).setDepth(0.75), // cosmic 3.5x
         ]
         this.lastTheme = 0
+        // Pulsing accent overlay for top-tier speeds (cyan strobe)
+        this.themePulse = this.add.rectangle(240, 384, 480, 768, 0x00CCFF, 0).setDepth(0.76)
 
         // Parallax circuit layer (depth 0.5, very faint — scrolls 8× slower)
         this.bgCircuit = this.add.tileSprite(240, 428, 480, 688, 'bgCircuit')
@@ -210,9 +214,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.lives = 3
         this.livesText = this.add.text(468, 22, '❤️ ❤️ ❤️', { fontSize: '16px' }).setOrigin(1, 0.5).setDepth(10)
 
-        this.obstacles = this.physics.add.group()
-        this.coins = this.physics.add.group()
-        this.powerups = this.physics.add.group()
+        this.obstacles = this.physics.add.group({ maxSize: 15 })
+        this.coins = this.physics.add.group({ maxSize: 60 })
+        this.powerups = this.physics.add.group({ maxSize: 10 })
 
         this.obstacleSpeed = 400
         this.maxSpeed = 800
@@ -220,6 +224,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         this.isGameOver = false
         this.isSliding = false
+        this.isCountingDown = true
         this.gameTime = 0
         this.jumpCount = 0
         this.lastMilestone = 0
@@ -233,7 +238,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.time.addEvent({
           delay: 1600,
           callback: () => {
-            if (this.isGameOver) return
+            if (this.isGameOver || this.isCountingDown) return
             const hasDrones = this.gameTime > 25000
             const roll = Phaser.Math.Between(0, hasDrones ? 4 : 3)
             if (hasDrones && roll >= 4) {
@@ -271,28 +276,29 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           loop: true
         })
 
-        // Spawn coins — obstacles live at y=548–575, so coins must stay above y=520
+        // Spawn coins in rows of 3–5 — bobbing driven by update loop (no repeat tweens)
         this.time.addEvent({
           delay: 1800,
           callback: () => {
-            if (this.isGameOver) return
+            if (this.isGameOver || this.isCountingDown) return
 
-            // Wider detection zone: 260–530 catches obstacles at spawn point too
             const nearbyObs = (this.obstacles.getChildren() as any[])
               .filter((o: any) => o.x > 260 && o.x < 530)
-
-            // Always keep coins above the obstacle danger zone
             const coinY = nearbyObs.length > 0
-              ? Phaser.Math.Between(573, 603)   // obstacle nearby → force jump-height coin
-              : Phaser.Math.Between(588, 638)   // no obstacle → comfortable mid-air coin
+              ? Phaser.Math.Between(573, 603)
+              : Phaser.Math.Between(590, 635)
 
-            const c = this.coins.create(510, coinY, 'coin')
-            c.setDisplaySize(28, 28)
-            c.setDepth(4)
-            c.body.allowGravity = false
-            c.setVelocityX(-this.obstacleSpeed)
-            // Single bounce tween only — rotate/scale tweens skipped for mobile performance
-            this.tweens.add({ targets: c, y: c.y - 10, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+            const count = Phaser.Math.Between(3, 5)
+            for (let i = 0; i < count; i++) {
+              const c = this.coins.create(510 + i * 42, coinY, 'coin')
+              if (!c) continue
+              c.setDisplaySize(28, 28)
+              c.setDepth(4)
+              c.body.allowGravity = false
+              c.setVelocityX(-this.obstacleSpeed)
+              c.baseY = coinY
+              c.phaseShift = i * 0.9
+            }
           },
           loop: true
         })
@@ -301,7 +307,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.time.addEvent({
           delay: 12000,
           callback: () => {
-            if (this.isGameOver) return
+            if (this.isGameOver || this.isCountingDown) return
             const types = ['powerShield', 'powerMagnet', 'powerSlow', 'power2x']
             const randomType = Phaser.Math.RND.pick(types)
             const p = this.powerups.create(510, Phaser.Math.Between(578, 648), randomType)
@@ -331,6 +337,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             })
             this.shieldIcon = null
             this.shieldOuter = null
+            if (this.shieldBar) { this.shieldBar.destroy(); this.shieldBar = null }
             const msg = this.add.text(240, 200, 'SHIELD BROKEN!', {
               fontSize: '16px', color: '#00FFFF', fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(20)
@@ -464,7 +471,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
 
         const doJump = () => {
-          if (this.isGameOver) return
+          if (this.isGameOver || this.isCountingDown) return
           if (this.basey.body.blocked.down) {
             this.basey.setVelocityY(-650)
             this.jumpCount = 1
@@ -491,7 +498,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
 
         const doSlide = () => {
-          if (this.isSliding || !this.basey.body.blocked.down || this.isGameOver) return
+          if (this.isSliding || !this.basey.body.blocked.down || this.isGameOver || this.isCountingDown) return
           this.isSliding = true
           this.slideLockedY = this.basey.y
           this.basey.setScale(1.4, 0.4)
@@ -533,13 +540,54 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           else if (ady > adx) { if (dy < 0) doJump(); else doSlide() }
         })
 
+        // 3-2-1 GO! countdown — dim backdrop + big number + glow ring
+        const countdownDim = this.add.rectangle(240, 384, 480, 768, 0x000022, 0.55).setDepth(100)
+        const countItems = [
+          { text: '3', color: '#FF4444' },
+          { text: '2', color: '#FFAA00' },
+          { text: '1', color: '#FFFF00' },
+          { text: 'GO!', color: '#00FF66' },
+        ]
+        let ci = 0
+        const nextCount = () => {
+          if (ci >= countItems.length) {
+            this.isCountingDown = false
+            this.tweens.add({ targets: countdownDim, alpha: 0, duration: 250,
+              onComplete: () => countdownDim.destroy() })
+            return
+          }
+          const { text, color } = countItems[ci]
+          const isGo = ci === 3
+          // Glow ring behind number
+          const ring = this.add.circle(240, 384, 90, Phaser.Display.Color.HexStringToColor(color).color, 0.18)
+            .setDepth(101).setStrokeStyle(3, Phaser.Display.Color.HexStringToColor(color).color, 0.9)
+          const ct = this.add.text(240, 384, text, {
+            fontSize: isGo ? '90px' : '120px',
+            color, fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 10,
+          }).setOrigin(0.5).setDepth(102).setScale(0.3).setAlpha(0)
+          ring.setScale(0.3).setAlpha(0)
+          this.tweens.add({
+            targets: [ct, ring], alpha: 1, scaleX: 1, scaleY: 1,
+            duration: 180, ease: 'Back.easeOut',
+            onComplete: () => {
+              this.tweens.add({
+                targets: [ct, ring], alpha: 0, scaleX: 1.8, scaleY: 1.8,
+                delay: 600, duration: 250,
+                onComplete: () => { ct.destroy(); ring.destroy(); ci++; nextCount() }
+              })
+            }
+          })
+        }
+        nextCount()
+
         this.runFrame = 0
         this.frameTimer = 0
         this.scoreSubmitted = false
       },
 
       update: function (this: any, _t: number, delta: number) {
-        if (this.isGameOver) return
+        if (this.isGameOver || this.isCountingDown) return
 
         if (this.activeMagnet) {
           this.coins.getChildren().forEach((coin: any) => {
@@ -601,13 +649,29 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.coins.getChildren().forEach((c: any) => { c.setVelocityX(-this.obstacleSpeed) })
           this.powerups.getChildren().forEach((p: any) => { p.setVelocityX(-this.obstacleSpeed) })
 
-          // Background theme shift
-          const newTheme = this.speedMultiplier >= 3.0 ? 3 : this.speedMultiplier >= 2.0 ? 2 : this.speedMultiplier >= 1.5 ? 1 : 0
+          // Background theme shift — 5 tiers (1.2 / 1.5 / 2.0 / 3.0 / 3.5)
+          const newTheme = this.speedMultiplier >= 3.5 ? 5
+            : this.speedMultiplier >= 3.0 ? 4
+            : this.speedMultiplier >= 2.0 ? 3
+            : this.speedMultiplier >= 1.5 ? 2
+            : this.speedMultiplier >= 1.2 ? 1 : 0
           if (newTheme !== this.lastTheme) {
             this.lastTheme = newTheme
             this.themeOverlays.forEach((ov: any, i: number) => {
-              this.tweens.add({ targets: ov, alpha: newTheme === i + 1 ? 0.22 : 0, duration: 2200 })
+              this.tweens.add({ targets: ov, alpha: newTheme === i + 1 ? 0.25 : 0, duration: 2000 })
             })
+            // Cosmic tier: start pulsing cyan strobe
+            if (newTheme === 5 && this.themePulse && !this.themePulseActive) {
+              this.themePulseActive = true
+              this.tweens.add({
+                targets: this.themePulse, alpha: 0.12,
+                duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+              })
+            } else if (newTheme < 5 && this.themePulseActive) {
+              this.themePulseActive = false
+              this.tweens.killTweensOf(this.themePulse)
+              this.tweens.add({ targets: this.themePulse, alpha: 0, duration: 800 })
+            }
           }
         }
 
@@ -674,6 +738,16 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           }
         } else {
           this.basey.setTexture('bj')
+        }
+
+        // Coin bobbing — update-loop driven, no repeat tweens (better mobile perf)
+        if (!this.activeMagnet) {
+          const bobT = this.time.now * 0.003
+          this.coins.getChildren().forEach((c: any) => {
+            if (c.active && c.baseY !== undefined) {
+              c.y = c.baseY + Math.sin(bobT + c.phaseShift) * 7
+            }
+          })
         }
 
         this.obstacles.getChildren().forEach((o: any) => { if (o.x < -100) o.destroy() })
