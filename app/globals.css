@@ -22,5 +22,38 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-display), -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Font tokens used across game UI */
+:root {
+  --ui-font: var(--font-display), -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ui-mono: var(--font-mono-game), "SF Mono", "JetBrains Mono", Menlo, monospace;
+}
+
+/* ── Mobile responsiveness ────────────────────────────────────────────── */
+/* Modals scroll inside the viewport instead of clipping off-screen */
+.rh-modal-scroll {
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 480px) {
+  /* Brand text + divider drop out on mobile — the start screen already shows a
+     giant BASE RUSH title, so the bar just keeps the functional pills. */
+  .tb-brand, .tb-brand-divider { display: none !important; }
+  .tb-header { padding: 7px 10px !important; }
+  .tb-pill { font-size: 11px !important; padding: 5px 10px !important; }
+  .tb-wallet { font-size: 10px !important; padding: 4px 8px !important; }
+  .tb-disconnect { font-size: 10px !important; padding: 4px 8px !important; }
+  .tb-row { gap: 6px !important; }
+
+  /* Modals: tighter padding so content gets more width */
+  .hiw-modal { padding: 18px 14px !important; }
+  .hiw-section-gap { gap: 10px !important; }
+}
+
+@media (max-width: 360px) {
+  .tb-pill { font-size: 10px !important; padding: 4px 8px !important; }
 }

@@ -87,13 +87,19 @@ export function createAudio(scene: any) {
       } catch (e) {}
     }
 
+    // Mobile: drop the lead track (halves oscillator-node creation) and use a
+    // wider scheduler lookahead so the timer fires less often → less main-thread work.
+    const onMobile = scene.isMobile
+    const lookahead = onMobile ? 0.5 : 0.3
+    const tick = onMobile ? 140 : 90
+
     const scheduler = () => {
       if (!scene.audioCtx || !scene.bgmGain) return
-      while (nextTime < scene.audioCtx.currentTime + 0.3) {
+      while (nextTime < scene.audioCtx.currentTime + lookahead) {
         const bSemi = bassPattern[noteIdx % bassPattern.length]
         playNote(root * Math.pow(2, bSemi / 12), nextTime, noteDur, 'square', 0.20)
-        // Lead every other beat, octave up
-        if (noteIdx % 2 === 0) {
+        // Lead every other beat (desktop only)
+        if (!onMobile && noteIdx % 2 === 0) {
           const lSemi = leadPattern[(noteIdx / 2) % leadPattern.length]
           playNote(root * Math.pow(2, lSemi / 12), nextTime + 0.04, noteDur * 0.7, 'triangle', 0.12)
         }
@@ -103,7 +109,7 @@ export function createAudio(scene: any) {
     }
 
     scheduler()
-    scene.bgmTimer = setInterval(scheduler, 60)
+    scene.bgmTimer = setInterval(scheduler, tick)
   }
 
   scene.stopBGM = () => {

@@ -3,6 +3,7 @@ import { createAudio } from './audio'
 import { createPowerUps, getPowerUpName } from './powerups'
 
 export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
   return {
     type: Phaser.AUTO,
     width: 480,
@@ -11,6 +12,15 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_HORIZONTALLY, // canvas sticks to top — no top gap
+    },
+    // Steady 60fps via rAF; roundPixels avoids sub-pixel blitting cost on mobile
+    fps: { target: 60, min: 30, forceSetTimeOut: false },
+    render: {
+      antialias: !isMobile,
+      powerPreference: 'high-performance',
+      roundPixels: true,
+      // Phaser keeps batching; disable per-frame canvas clear hints not needed
+      clearBeforeRender: true,
     },
     physics: {
       default: 'arcade',
@@ -180,6 +190,13 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.basey.setCollideWorldBounds(true)
         this.physics.add.collider(this.basey, this.ground)
 
+        // Apply equipped skin tint (set by React via window.equippedSkinTint)
+        const skinTint = (window as any).equippedSkinTint
+        if (typeof skinTint === 'number' && skinTint !== 0xFFFFFF) {
+          this.basey.setTint(skinTint)
+          this.skinTint = skinTint
+        }
+
         this.baseyGlow = this.add.circle(80, 718, 26, 0xFFFFFF, 0.08).setDepth(1)
 
         this.score = 0
@@ -200,6 +217,40 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           fontSize: '13px', color: '#FFD700', fontStyle: 'bold'
         }).setDepth(10)
         this.comboText.setVisible(false)
+
+        // ── OBJECT POOLS (avoid per-coin allocation → no GC stutter on mobile) ──
+        // Floating "+points" text pool. Phaser Text uploads a GPU texture on every
+        // create, so spawning one per coin in a 5-coin row caused visible hitches.
+        // Pre-make a ring of reusable texts and recycle them instead.
+        this.floatTextPool = []
+        for (let i = 0; i < 8; i++) {
+          const ft = this.add.text(0, 0, '', {
+            fontSize: '15px', color: '#FFD700', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 3
+          }).setOrigin(0.5).setDepth(12).setVisible(false)
+          this.floatTextPool.push(ft)
+        }
+        this.floatTextIdx = 0
+
+        // Particle circle pool — recycled for coin-collect bursts
+        this.particlePool = []
+        for (let i = 0; i < 24; i++) {
+          const pc = this.add.circle(0, 0, 3, 0xFFCC00, 0.9).setDepth(5).setVisible(false).setActive(false)
+          this.particlePool.push(pc)
+        }
+        this.particleIdx = 0
+
+        // Pre-warm emoji glyph rasterization. The FIRST time an emoji is drawn to
+        // a Canvas it must load+rasterize the colour-emoji font — a multi-ms hitch.
+        // Render every gameplay emoji once off-screen so the real use is instant.
+        const warm = this.add.text(-300, -300, '🛡️🧲⏱️💎🎯🔥', { fontSize: '18px' }).setDepth(-1)
+        this.time.delayedCall(60, () => warm.destroy())
+
+        // Reusable power-up notification text (avoids per-pickup emoji text creation)
+        this.powerNotif = this.add.text(240, 100, '', {
+          fontSize: '18px', color: '#00FFFF', fontStyle: 'bold',
+          stroke: '#000000', strokeThickness: 4
+        }).setOrigin(0.5).setDepth(20).setVisible(false)
 
         this.activeShield = false
         this.activeMagnet = false
@@ -356,7 +407,11 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.cameras.main.shake(200, 0.015)
           this.basey.setTint(0xFF3333)
           this.playHitSound()
-          this.time.delayedCall(280, () => { if (!this.isGameOver) this.basey.clearTint() })
+          this.time.delayedCall(280, () => {
+            if (this.isGameOver) return
+            this.basey.clearTint()
+            if (this.skinTint) this.basey.setTint(this.skinTint)
+          })
 
           if (this.lives === 2) this.livesText.setText('❤️ ❤️ 🖤')
           if (this.lives === 1) this.livesText.setText('❤️ 🖤 🖤')
@@ -383,6 +438,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             this.cameras.main.flash(350, 255, 60, 60)
             this.tweens.add({ targets: this.basey, angle: 360, scaleX: 0, scaleY: 0, alpha: 0, duration: 650 })
             this.stopBGM?.()
+            ;(window as any).onCoinsEarned?.(this.coinsCollected)
             if (!this.scoreSubmitted) {
               this.scoreSubmitted = true
               ;(window as any).handleGameOver?.(this.score, {
@@ -396,32 +452,12 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           }
         })
 
-        // Coin collect
+        // Coin collect — pooled effects, zero per-coin allocation
+        const burstColors = [0xFFCC00, 0x0052FF, 0xFFFFFF, 0xFFDD44, 0x1A6EFF]
         this.physics.add.overlap(this.basey, this.coins, (_b: any, coin: any) => {
           const coinX = coin.x
           const coinY = coin.y
           coin.destroy()
-
-          // Flash burst at collection point
-          const flash = this.add.circle(coinX, coinY, 16, 0xFFDD44, 0.75).setDepth(6)
-          this.tweens.add({ targets: flash, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 220, onComplete: () => flash.destroy() })
-
-          // Lightweight particle burst — no physics bodies, tween-only (mobile-friendly)
-          const burstColors = [0xFFCC00, 0x0052FF, 0xFFFFFF, 0xFFDD44, 0x1A6EFF]
-          const pCount = this.isMobile ? 5 : 8
-          for (let i = 0; i < pCount; i++) {
-            const angle = (Math.PI * 2 * i) / pCount
-            const dist = Phaser.Math.Between(40, 80)
-            const color = burstColors[i % burstColors.length]
-            const particle = this.add.circle(coinX, coinY, Phaser.Math.Between(2, 4), color, 0.9).setDepth(5)
-            this.tweens.add({
-              targets: particle,
-              x: coinX + Math.cos(angle) * dist,
-              y: coinY + Math.sin(angle) * dist,
-              alpha: 0, scaleX: 0.1, scaleY: 0.1,
-              duration: 300, onComplete: () => particle.destroy()
-            })
-          }
 
           this.combo += 1
           this.coinsCollected += 1
@@ -442,16 +478,38 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
           this.playCoinSound()
 
-          const t = this.add.text(
-            this.basey.x, this.basey.y - 30,
-            multiplier > 1 ? `+${points} (x${multiplier})` : `+${points}`,
-            {
-              fontSize: multiplier > 1 ? '18px' : '15px',
-              color: multiplier > 1 ? '#FF00FF' : '#FFD700',
-              fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-            }
-          )
-          this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, duration: 600, onComplete: () => t.destroy() })
+          // Particle burst — recycle from pool (3 on mobile, 6 desktop)
+          const pCount = this.isMobile ? 3 : 6
+          for (let i = 0; i < pCount; i++) {
+            const angle = (Math.PI * 2 * i) / pCount
+            const dist = Phaser.Math.Between(36, 70)
+            const p = this.particlePool[this.particleIdx]
+            this.particleIdx = (this.particleIdx + 1) % this.particlePool.length
+            this.tweens.killTweensOf(p)
+            p.setPosition(coinX, coinY).setFillStyle(burstColors[i % burstColors.length], 0.9)
+              .setScale(1).setAlpha(0.9).setVisible(true).setActive(true)
+            this.tweens.add({
+              targets: p,
+              x: coinX + Math.cos(angle) * dist,
+              y: coinY + Math.sin(angle) * dist,
+              alpha: 0, scaleX: 0.1, scaleY: 0.1,
+              duration: 300,
+              onComplete: () => { p.setVisible(false).setActive(false) }
+            })
+          }
+
+          // Floating "+points" text — recycle from pool (no GPU texture churn)
+          const t = this.floatTextPool[this.floatTextIdx]
+          this.floatTextIdx = (this.floatTextIdx + 1) % this.floatTextPool.length
+          this.tweens.killTweensOf(t)
+          t.setText(multiplier > 1 ? `+${points} (x${multiplier})` : `+${points}`)
+            .setColor(multiplier > 1 ? '#FF00FF' : '#FFD700')
+            .setPosition(this.basey.x, this.basey.y - 30)
+            .setAlpha(1).setVisible(true)
+          this.tweens.add({
+            targets: t, y: this.basey.y - 70, alpha: 0, duration: 600,
+            onComplete: () => t.setVisible(false)
+          })
         })
 
         // Power-up collect
@@ -465,11 +523,12 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           else if (type === 'powerSlow') this.activateSlowMo()
           else if (type === 'power2x') this.activateDouble()
 
-          const notif = this.add.text(240, 100, getPowerUpName(type), {
-            fontSize: '18px', color: '#00FFFF', fontStyle: 'bold',
-            stroke: '#000000', strokeThickness: 4
-          }).setOrigin(0.5).setDepth(20)
-          this.tweens.add({ targets: notif, y: 60, alpha: 0, duration: 2000, ease: 'Power2', onComplete: () => notif.destroy() })
+          // Reuse the pre-warmed notification text (no per-pickup emoji rasterize)
+          const notif = this.powerNotif
+          this.tweens.killTweensOf(notif)
+          notif.setText(getPowerUpName(type)).setPosition(240, 100).setAlpha(1).setVisible(true)
+          this.tweens.add({ targets: notif, y: 60, alpha: 0, duration: 2000, ease: 'Power2',
+            onComplete: () => notif.setVisible(false) })
         })
 
         // Jump effect
@@ -667,9 +726,14 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             else this.speedText.setColor('#00FFFF')
           }
 
-          this.obstacles.getChildren().forEach((o: any) => { o.setVelocityX(-this.obstacleSpeed) })
-          this.coins.getChildren().forEach((c: any) => { c.setVelocityX(-this.obstacleSpeed) })
-          this.powerups.getChildren().forEach((p: any) => { p.setVelocityX(-this.obstacleSpeed) })
+          // Re-apply velocities only when speed drifted ≥3px/s (was every frame on
+          // every object — pure waste since speed climbs just 0.04px/frame).
+          if (Math.abs(this.obstacleSpeed - (this.lastVelApplied || 0)) >= 3) {
+            this.lastVelApplied = this.obstacleSpeed
+            this.obstacles.getChildren().forEach((o: any) => { o.setVelocityX(-this.obstacleSpeed) })
+            this.coins.getChildren().forEach((c: any) => { c.setVelocityX(-this.obstacleSpeed) })
+            this.powerups.getChildren().forEach((p: any) => { p.setVelocityX(-this.obstacleSpeed) })
+          }
 
           // Background theme shift — 5 tiers (1.2 / 1.5 / 2.0 / 3.0 / 3.5)
           const newTheme = this.speedMultiplier >= 3.5 ? 5

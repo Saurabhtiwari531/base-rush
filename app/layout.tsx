@@ -1,10 +1,26 @@
 import type { Metadata, Viewport } from "next";
+import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cookies } from 'next/headers'
 import { cookieToInitialState } from 'wagmi'
 import { wagmiConfig } from '../lib/wagmi'
 import { Providers } from './providers'
 import { Analytics } from '@vercel/analytics/react'
+
+// Display font — modern, geometric, techy yet highly readable (used app-wide)
+const display = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-display',
+  display: 'swap',
+})
+// Monospace — wallet addresses, tx hashes, numeric readouts
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-mono-game',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://baserush.fun'),
@@ -49,7 +65,7 @@ export default async function RootLayout({
   )
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${display.variable} ${mono.variable}`}>
       <head>
         {/* Required for Base app store listing */}
         <meta name="base:app_id" content="6a1553a25ef088574244918b" />

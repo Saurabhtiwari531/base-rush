@@ -5,7 +5,7 @@ import { LeaderboardEntry } from '../lib/contract'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 const bodyText: React.CSSProperties = {
-  color: '#8899AA', fontSize: '11px', lineHeight: '1.6', margin: 0,
+  color: '#C7D6EA', fontSize: '12px', lineHeight: '1.6', margin: 0,
 }
 
 function Section({
@@ -55,7 +55,7 @@ export function TopBar({
 
   return (
     <>
-      <div style={{
+      <div className="tb-header" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: 'rgba(0,0,30,0.95)',
         borderBottom: '1px solid #0044FF',
@@ -63,7 +63,7 @@ export function TopBar({
         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
         {/* ── LEFT SIDE ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="tb-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
           {onTogglePause ? (
             /* In-game: show pause/resume button only */
             <button
@@ -84,26 +84,27 @@ export function TopBar({
           ) : (
             /* Start / Game-over screen: brand + menu items */
             <>
-              <span style={{
+              <span className="tb-brand" style={{
                 color: '#4499FF', fontWeight: 'bold', fontSize: '15px',
-                letterSpacing: '3px',
+                letterSpacing: '3px', whiteSpace: 'nowrap',
                 textShadow: '0 0 12px rgba(0,120,255,0.8)',
               }}>
                 ⚡ BASE RUSH
               </span>
 
               {/* Divider */}
-              <div style={{ width: '1px', height: '18px', background: 'rgba(0,68,255,0.35)' }} />
+              <div className="tb-brand-divider" style={{ width: '1px', height: '18px', background: 'rgba(0,68,255,0.35)', flexShrink: 0 }} />
 
               {/* How It Works */}
               <button
                 onClick={() => setShowHowItWorks(true)}
+                className="tb-pill"
                 style={{
                   background: 'rgba(0,82,255,0.15)',
                   border: '1px solid rgba(0,82,255,0.4)',
                   color: '#88BBFF', padding: '4px 10px', borderRadius: '20px',
                   cursor: 'pointer', fontSize: '11px', fontWeight: 'bold',
-                  letterSpacing: '0.5px', whiteSpace: 'nowrap',
+                  letterSpacing: '0.5px', whiteSpace: 'nowrap', flexShrink: 0,
                 }}
               >
                 📖 How It Works
@@ -112,11 +113,12 @@ export function TopBar({
               {/* Leaderboard */}
               <button
                 onClick={() => { setShowLeaderboard(!showLeaderboard); if (!showLeaderboard) refetch() }}
+                className="tb-pill"
                 style={{
                   background: 'rgba(255,215,0,0.15)', border: '1px solid #FFD700',
                   color: '#FFD700', padding: '4px 10px', borderRadius: '20px',
                   cursor: 'pointer', fontSize: '11px', fontWeight: 'bold',
-                  whiteSpace: 'nowrap',
+                  whiteSpace: 'nowrap', flexShrink: 0,
                 }}
               >
                 🏆 Leaderboard
@@ -126,21 +128,22 @@ export function TopBar({
         </div>
 
         {/* ── RIGHT SIDE — wallet only ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="tb-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {isConnected && (
             <>
-              <span style={{
-                color: '#00FF88', fontSize: '12px',
+              <span className="tb-wallet" style={{
+                color: '#00FF88', fontSize: '12px', fontFamily: 'var(--ui-mono)',
                 background: 'rgba(0,255,100,0.1)',
                 padding: '4px 10px', borderRadius: '20px',
-                border: '1px solid #00FF88'
+                border: '1px solid #00FF88', whiteSpace: 'nowrap',
               }}>
-                ✅ {address?.slice(0, 6)}...{address?.slice(-4)}
+                ✅ {address?.slice(0, 4)}…{address?.slice(-4)}
               </span>
-              <button onClick={() => disconnect()} style={{
+              <button onClick={() => disconnect()} className="tb-disconnect" style={{
                 background: 'transparent', border: '1px solid #FF4444',
                 color: '#FF4444', padding: '4px 10px',
-                borderRadius: '20px', cursor: 'pointer', fontSize: '12px'
+                borderRadius: '20px', cursor: 'pointer', fontSize: '12px',
+                whiteSpace: 'nowrap',
               }}>
                 Disconnect
               </button>
@@ -155,11 +158,11 @@ export function TopBar({
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.95)', zIndex: 500,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '20px', overflowY: 'auto',
+          padding: '12px',
         }}>
-          <div style={{
+          <div className="hiw-modal rh-modal-scroll" style={{
             background: 'linear-gradient(135deg, rgba(0,8,40,0.98) 0%, rgba(0,4,20,0.98) 100%)',
-            border: '2px solid #0052FF', borderRadius: '20px', padding: '28px 24px',
+            border: '2px solid #0052FF', borderRadius: '20px', padding: '24px 20px',
             maxWidth: '460px', width: '100%', position: 'relative',
             boxShadow: '0 0 40px rgba(0,82,255,0.3)',
           }}>
@@ -183,12 +186,12 @@ export function TopBar({
                 margin: '0 0 4px', letterSpacing: '4px',
                 textShadow: '0 0 16px rgba(0,100,255,0.6)',
               }}>HOW IT WORKS</h2>
-              <p style={{ color: '#445566', fontSize: '11px', margin: 0, letterSpacing: '1px' }}>
+              <p style={{ color: '#6C86A8', fontSize: '11px', margin: 0, letterSpacing: '2px', fontWeight: 600 }}>
                 CYBERPUNK RUNNER · BASE NETWORK
               </p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className="hiw-section-gap" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
               {/* The Game */}
               <Section icon="🎮" title="THE GAME" color="#4499FF">
@@ -213,8 +216,8 @@ export function TopBar({
                       border: '1px solid rgba(0,82,255,0.2)',
                       borderRadius: '8px', padding: '8px',
                     }}>
-                      <div style={{ color: '#AACCFF', fontSize: '9px', marginBottom: '3px' }}>{c.key}</div>
-                      <div style={{ color: c.color, fontSize: '11px', fontWeight: 'bold' }}>{c.action}</div>
+                      <div style={{ color: '#9FC2EE', fontSize: '10px', marginBottom: '3px', fontWeight: 500 }}>{c.key}</div>
+                      <div style={{ color: c.color, fontSize: '12px', fontWeight: 700 }}>{c.action}</div>
                     </div>
                   ))}
                 </div>
@@ -236,10 +239,10 @@ export function TopBar({
                       border: '1px solid rgba(255,215,0,0.15)',
                       borderRadius: '8px',
                     }}>
-                      <span style={{ color: '#AAAAAA', fontSize: '11px' }}>{s.label}</span>
+                      <span style={{ color: '#CBD8EA', fontSize: '12px', fontWeight: 500 }}>{s.label}</span>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ color: '#FFD700', fontSize: '13px', fontWeight: 'bold' }}>{s.val}</span>
-                        <span style={{ color: '#555566', fontSize: '9px', marginLeft: '6px' }}>{s.note}</span>
+                        <span style={{ color: '#FFD700', fontSize: '14px', fontWeight: 700 }}>{s.val}</span>
+                        <span style={{ color: '#8090A8', fontSize: '9.5px', marginLeft: '6px' }}>{s.note}</span>
                       </div>
                     </div>
                   ))}
@@ -270,8 +273,8 @@ export function TopBar({
                         fontSize: '18px', flexShrink: 0,
                       }}>{p.icon}</div>
                       <div>
-                        <div style={{ color: p.color, fontSize: '12px', fontWeight: 'bold' }}>{p.name}</div>
-                        <div style={{ color: '#778899', fontSize: '10px', marginTop: '2px' }}>{p.desc}</div>
+                        <div style={{ color: p.color, fontSize: '13px', fontWeight: 700 }}>{p.name}</div>
+                        <div style={{ color: '#B0C3DB', fontSize: '10.5px', marginTop: '2px', lineHeight: 1.4 }}>{p.desc}</div>
                       </div>
                     </div>
                   ))}
@@ -303,12 +306,12 @@ export function TopBar({
                         borderRadius: '8px', padding: '8px 4px',
                       }}>
                         <div style={{ fontSize: '20px' }}>{r.rank}</div>
-                        <div style={{ color: '#FFD700', fontSize: '14px', fontWeight: 'bold' }}>{r.prize}</div>
-                        <div style={{ color: '#556677', fontSize: '9px' }}>{r.label}</div>
+                        <div style={{ color: '#FFD700', fontSize: '15px', fontWeight: 700 }}>{r.prize}</div>
+                        <div style={{ color: '#8AA0BC', fontSize: '9.5px', fontWeight: 500 }}>{r.label}</div>
                       </div>
                     ))}
                   </div>
-                  <p style={{ color: '#334455', fontSize: '9px', margin: '10px 0 0', textAlign: 'center' }}>
+                  <p style={{ color: '#7C93B2', fontSize: '9.5px', margin: '10px 0 0', textAlign: 'center', letterSpacing: '0.5px' }}>
                     🗓 Weekly prizes · Resets every Sunday
                   </p>
                 </div>
@@ -338,11 +341,11 @@ export function TopBar({
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.95)', zIndex: 500,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '20px'
+          padding: '12px'
         }}>
-          <div style={{
+          <div className="hiw-modal rh-modal-scroll" style={{
             background: 'linear-gradient(135deg, rgba(0,8,40,0.98) 0%, rgba(0,4,20,0.98) 100%)',
-            border: '2px solid #FFD700', borderRadius: '20px', padding: '32px',
+            border: '2px solid #FFD700', borderRadius: '20px', padding: '28px 22px',
             maxWidth: '480px', width: '100%',
             boxShadow: '0 0 40px rgba(255,215,0,0.3)', position: 'relative'
           }}>
@@ -419,7 +422,7 @@ export function TopBar({
 
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          color: isEmpty ? '#555' : '#FFFFFF', fontSize: '13px', fontFamily: 'monospace',
+                          color: isEmpty ? '#667' : '#FFFFFF', fontSize: '13px', fontFamily: 'var(--ui-mono)',
                           marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis'
                         }}>
                           {isEmpty ? (

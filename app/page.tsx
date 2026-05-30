@@ -6,6 +6,13 @@ import { usePersonalBest } from '../hooks/usePersonalBest'
 import { TopBar } from '../components/TopBar'
 import { StartScreen } from '../components/StartScreen'
 import { GameOver } from '../components/GameOver'
+import { AchievementToast } from '../components/AchievementToast'
+import { AchievementsModal } from '../components/AchievementsModal'
+import { RewardsModal } from '../components/RewardsModal'
+import { useAchievements } from '../hooks/useAchievements'
+import { useDailyStreak } from '../hooks/useDailyStreak'
+import { useCoinWallet } from '../hooks/useCoinWallet'
+import { useSkins, type Skin } from '../hooks/useSkins'
 import { createGameConfig } from '../game/scene'
 
 
@@ -18,9 +25,24 @@ export default function Home() {
   const [isGameOver, setIsGameOver] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [showAchievements, setShowAchievements] = useState(false)
+  const [showRewards, setShowRewards] = useState(false)
+  const [rewardsInitialTab, setRewardsInitialTab] = useState<'daily' | 'skins' | 'how'>('daily')
+  const streak = useDailyStreak()
+  const wallet = useCoinWallet()
+  const skins = useSkins()
   const [runStats, setRunStats] = useState<{
     distance: number; coins: number; topCombo: number; duration: number; topSpeed: number
   } | null>(null)
+  const runFinalizedRef = useRef(false)
+  const chainAchUnlockedRef = useRef(false)
+  const {
+    unlocked: achUnlocked,
+    currentToast,
+    finalizeRun: finalizeAchievementsRun,
+    unlockOnChain: unlockOnChainAch,
+    dismissToast: dismissAchToast,
+  } = useAchievements()
 
   const {
     address, isConnected, disconnect,
@@ -51,8 +73,32 @@ export default function Home() {
 
   // Reset isNewBest + stats when starting a new game
   useEffect(() => {
-    if (gameStarted) { resetNewBest(); setRunStats(null) }
+    if (gameStarted) {
+      resetNewBest()
+      setRunStats(null)
+      runFinalizedRef.current = false
+      chainAchUnlockedRef.current = false
+    }
   }, [gameStarted])
+
+  // Finalize achievements once when a run ends (career stats update + achievement check)
+  useEffect(() => {
+    if (isGameOver && runStats && !runFinalizedRef.current) {
+      runFinalizedRef.current = true
+      finalizeAchievementsRun(runStats, {
+        score: Math.floor(finalScore),
+        isNewBest,
+      })
+    }
+  }, [isGameOver, runStats, finalScore, isNewBest, finalizeAchievementsRun])
+
+  // Unlock on-chain achievement when submit succeeds
+  useEffect(() => {
+    if (canReplay && !chainAchUnlockedRef.current) {
+      chainAchUnlockedRef.current = true
+      unlockOnChainAch()
+    }
+  }, [canReplay, unlockOnChainAch])
 
   // Phaser game init
   useEffect(() => {
@@ -74,7 +120,7 @@ export default function Home() {
         try {
           const scene = game.scene.scenes[0]
           scene?.stopBGM?.()
-          if (scene?.audioCtx) scene.audioCtx.close()
+          if (scene?.audioCtx && scene.audioCtx.state !== 'closed') scene.audioCtx.close().catch(() => {})
         } catch (e) {}
         game.destroy(true)
         gameInstanceRef.current = null
@@ -92,11 +138,18 @@ export default function Home() {
       setTimeout(() => { submitScoreToChain(score) }, 100)
     }
     ;(window as any).gameReady = () => { setGameLoading(false) }
+    ;(window as any).onCoinsEarned = (n: number) => { if (n > 0) wallet.addCoins(n) }
     return () => {
       delete (window as any).handleGameOver
       delete (window as any).gameReady
+      delete (window as any).onCoinsEarned
     }
-  }, [isConnected, submitScoreToChain])
+  }, [isConnected, submitScoreToChain, wallet])
+
+  // Push equipped skin tint to window before each game starts (Phaser reads it in create())
+  useEffect(() => {
+    ;(window as any).equippedSkinTint = skins.equippedTint
+  }, [skins.equippedTint])
 
   // Full-screen touch handler — forwards taps/swipes to Phaser even in letterbox area
   const touchRef = useRef<{ x: number; y: number } | null>(null)
@@ -136,7 +189,7 @@ export default function Home() {
       try {
         const scene = gameInstanceRef.current.scene?.scenes?.[0]
         scene?.stopBGM?.()
-        if (scene?.audioCtx) scene.audioCtx.close()
+        if (scene?.audioCtx && scene.audioCtx.state !== 'closed') scene.audioCtx.close().catch(() => {})
       } catch (_) {}
       gameInstanceRef.current.destroy(true)
       gameInstanceRef.current = null
@@ -182,6 +235,50 @@ export default function Home() {
         canvas { display: block; }
       `}</style>
 
+      <AchievementToast achievement={currentToast} onDismiss={dismissAchToast} />
+      {showAchievements && (
+        <AchievementsModal unlocked={achUnlocked} onClose={() => setShowAchievements(false)} />
+      )}
+      {showRewards && (
+        <RewardsModal
+          initialTab={rewardsInitialTab}
+          onClose={() => setShowRewards(false)}
+          daily={{
+            streak: streak.streak,
+            totalCheckIns: streak.totalCheckIns,
+            hasCheckedInToday: streak.hasCheckedInToday,
+            isStreakBroken: streak.isStreakBroken,
+            isPending: streak.isPending,
+            txError: streak.txError,
+            txHash: streak.txHash,
+            lastHash: streak.lastHash,
+            needsWallet: streak.needsWallet,
+            prizeClaimedDay25: streak.prizeClaimedDay25,
+            onCheckIn: streak.checkIn,
+            onClaimPrize: streak.claimDay25Prize,
+            onConnectWallet: () => connectWallet(),
+            onResetTx: streak.resetTx,
+          }}
+          skinsProps={{
+            balance: wallet.balance,
+            owned: skins.owned,
+            equipped: skins.equipped,
+            streak: streak.streak,
+            onClaim: (skin: Skin) => {
+              if (skins.isOwned(skin.id)) return
+              if (skin.unlock === 'streak25') {
+                if (streak.streak >= 25) { skins.claim(skin.id); skins.equip(skin.id) }
+                return
+              }
+              if (wallet.spendCoins(skin.price)) {
+                skins.claim(skin.id); skins.equip(skin.id)
+              }
+            },
+            onEquip: skins.equip,
+          }}
+        />
+      )}
+
       <TopBar
         isConnected={isConnected}
         address={address}
@@ -202,6 +299,15 @@ export default function Home() {
           address={address}
           onConnect={connectWallet}
           personalBest={best}
+          achievementsUnlocked={achUnlocked.size}
+          onShowAchievements={() => setShowAchievements(true)}
+          streak={streak.streak}
+          hasCheckedInToday={streak.hasCheckedInToday}
+          coinBalance={wallet.balance}
+          equippedSkin={skins.equippedSkin}
+          onOpenDaily={() => { setRewardsInitialTab('daily'); setShowRewards(true) }}
+          onOpenSkins={() => { setRewardsInitialTab('skins'); setShowRewards(true) }}
+          onOpenHowItWorks={() => { setRewardsInitialTab('how'); setShowRewards(true) }}
         />
       ) : (
         <div

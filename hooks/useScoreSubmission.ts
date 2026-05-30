@@ -172,7 +172,19 @@ export function useScoreSubmission() {
   }
 
   const connectWallet = (connector?: any) => {
-    const c = connector ?? connectors[0]
+    let c = connector
+    if (!c) {
+      // On desktop with a browser-extension wallet (MetaMask etc.), prefer that —
+      // baseAccount (smart-wallet popup) often fails on plain desktop/localhost.
+      const hasInjected = typeof window !== 'undefined' && (window as any).ethereum
+      if (hasInjected) {
+        c = connectors.find(x => x.id === 'metaMask')
+          ?? connectors.find(x => x.id === 'injected')
+          ?? connectors[0]
+      } else {
+        c = connectors[0]
+      }
+    }
     if (c) connectWagmi({ connector: c })
   }
 

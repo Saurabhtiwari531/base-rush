@@ -1,5 +1,6 @@
 'use client'
 import { BaseyCanvas } from './BaseyCanvas'
+import type { Skin } from '../hooks/useSkins'
 
 type Props = {
   onStart: () => void
@@ -7,9 +8,41 @@ type Props = {
   address: string | undefined
   onConnect: () => void
   personalBest: number
+  achievementsUnlocked: number
+  onShowAchievements: () => void
+  streak: number
+  hasCheckedInToday: boolean
+  coinBalance: number
+  equippedSkin: Skin
+  onOpenDaily: () => void
+  onOpenSkins: () => void
+  onOpenHowItWorks: () => void
 }
 
-export function StartScreen({ onStart, isConnected, address, onConnect, personalBest }: Props) {
+const TOTAL_ACHIEVEMENTS = 16
+
+const trayBtn: React.CSSProperties = {
+  background: 'rgba(0,82,255,0.08)',
+  border: '1px solid rgba(0,82,255,0.25)',
+  borderRadius: '10px',
+  padding: '8px 4px',
+  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+  cursor: 'pointer', color: 'inherit',
+}
+const trayLabel: React.CSSProperties = {
+  color: '#88AACC', fontSize: '8px', letterSpacing: '1.5px', fontWeight: 'bold',
+  marginTop: '2px',
+}
+const trayValue: React.CSSProperties = {
+  fontSize: '10px', fontWeight: 'bold', display: 'flex', gap: '2px',
+}
+
+export function StartScreen({
+  onStart, isConnected, address, onConnect, personalBest,
+  achievementsUnlocked, onShowAchievements,
+  streak, hasCheckedInToday, coinBalance, equippedSkin,
+  onOpenDaily, onOpenSkins, onOpenHowItWorks,
+}: Props) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
@@ -161,7 +194,7 @@ export function StartScreen({ onStart, isConnected, address, onConnect, personal
         {personalBest > 0 && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '8px', marginBottom: '14px',
+            gap: '8px', marginBottom: '10px',
             background: 'rgba(255,215,0,0.08)',
             border: '1px solid rgba(255,215,0,0.3)',
             borderRadius: '10px', padding: '8px 16px',
@@ -174,6 +207,82 @@ export function StartScreen({ onStart, isConnected, address, onConnect, personal
             <span style={{ color: '#AAAAAA', fontSize: '10px' }}>pts</span>
           </div>
         )}
+
+        {/* DAILY STREAK CTA — hero spot */}
+        <button
+          onClick={onOpenDaily}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '12px',
+            width: '100%', marginBottom: '10px',
+            background: hasCheckedInToday
+              ? 'linear-gradient(135deg, rgba(0,200,80,0.18), rgba(0,200,80,0.04))'
+              : streak > 0
+                ? 'linear-gradient(135deg, rgba(255,140,0,0.22), rgba(255,80,0,0.05))'
+                : 'linear-gradient(135deg, rgba(255,140,0,0.15), rgba(255,80,0,0.03))',
+            border: hasCheckedInToday
+              ? '1px solid rgba(0,200,80,0.5)'
+              : '1px solid rgba(255,140,0,0.5)',
+            borderRadius: '12px', padding: '10px 14px',
+            cursor: 'pointer', color: 'inherit', textAlign: 'left',
+            position: 'relative', overflow: 'hidden',
+          }}
+        >
+          <div style={{ fontSize: '24px', flexShrink: 0 }}>
+            {hasCheckedInToday ? '✅' : '🔥'}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
+              color: hasCheckedInToday ? '#00C853' : '#FFAA00',
+              marginBottom: '1px',
+            }}>
+              {hasCheckedInToday ? 'STREAK ACTIVE TODAY' : streak > 0 ? 'CHECK IN ON BASE' : 'START DAILY STREAK'}
+            </div>
+            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 'bold', lineHeight: 1 }}>
+              {streak > 0 ? `🔥 ${streak}-day streak` : 'Day 25 = $5 prize 💵'}
+            </div>
+          </div>
+          <span style={{ color: '#fff', fontSize: '16px' }}>›</span>
+        </button>
+
+        {/* 3-column tray: Achievements · Skins · Best */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+          gap: '6px', marginBottom: '12px',
+        }}>
+          <button onClick={onShowAchievements} style={trayBtn}>
+            <div style={{ fontSize: '18px', lineHeight: 1 }}>🏅</div>
+            <div style={trayLabel}>BADGES</div>
+            <div style={trayValue}>
+              <span style={{ color: '#FFD700' }}>{achievementsUnlocked}</span>
+              <span style={{ color: '#556677' }}>/{TOTAL_ACHIEVEMENTS}</span>
+            </div>
+          </button>
+          <button onClick={onOpenSkins} style={trayBtn}>
+            <div style={{ fontSize: '18px', lineHeight: 1 }}>{equippedSkin.icon}</div>
+            <div style={trayLabel}>SKINS</div>
+            <div style={trayValue}>
+              <span style={{ color: '#FFD700' }}>🪙{coinBalance.toLocaleString()}</span>
+            </div>
+          </button>
+          {personalBest > 0 ? (
+            <div style={{ ...trayBtn, cursor: 'default' } as React.CSSProperties}>
+              <div style={{ fontSize: '18px', lineHeight: 1 }}>🏆</div>
+              <div style={trayLabel}>BEST</div>
+              <div style={trayValue}>
+                <span style={{ color: '#FFD700' }}>{personalBest.toLocaleString()}</span>
+              </div>
+            </div>
+          ) : (
+            <button onClick={onOpenHowItWorks} style={trayBtn}>
+              <div style={{ fontSize: '18px', lineHeight: 1 }}>📖</div>
+              <div style={trayLabel}>HOW</div>
+              <div style={trayValue}>
+                <span style={{ color: '#88BBFF' }}>Learn</span>
+              </div>
+            </button>
+          )}
+        </div>
 
         {/* PLAY button */}
         <button
