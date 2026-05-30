@@ -52,24 +52,30 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         // ── BACKGROUND ──────────────────────────────────────────────────────
         this.add.image(240, 384, 'bg').setDepth(0)
-        // Speed-based theme overlays (fade in at 1.2 / 1.5 / 2.0 / 3.0 / 3.5)
+        // Speed-based theme overlays (fade in at 1.2 / 1.5 / 2.0 / 3.0 / 3.5).
+        // Start hidden — an alpha-0 fullscreen rect STILL draws on the GPU, so 5
+        // of them = 5× wasted fullscreen overdraw every frame. We only flip the
+        // active tier visible, keeping at most one fullscreen tint on screen.
         this.themeOverlays = [
-          this.add.rectangle(240, 384, 480, 768, 0x553300, 0).setDepth(0.75), // sunset 1.2x
-          this.add.rectangle(240, 384, 480, 768, 0x330066, 0).setDepth(0.75), // purple 1.5x
-          this.add.rectangle(240, 384, 480, 768, 0x550011, 0).setDepth(0.75), // crimson 2.0x
-          this.add.rectangle(240, 384, 480, 768, 0x003311, 0).setDepth(0.75), // toxic green 3.0x
-          this.add.rectangle(240, 384, 480, 768, 0x440099, 0).setDepth(0.75), // cosmic 3.5x
+          this.add.rectangle(240, 384, 480, 768, 0x553300, 0).setDepth(0.75).setVisible(false), // sunset 1.2x
+          this.add.rectangle(240, 384, 480, 768, 0x330066, 0).setDepth(0.75).setVisible(false), // purple 1.5x
+          this.add.rectangle(240, 384, 480, 768, 0x550011, 0).setDepth(0.75).setVisible(false), // crimson 2.0x
+          this.add.rectangle(240, 384, 480, 768, 0x003311, 0).setDepth(0.75).setVisible(false), // toxic green 3.0x
+          this.add.rectangle(240, 384, 480, 768, 0x440099, 0).setDepth(0.75).setVisible(false), // cosmic 3.5x
         ]
         this.lastTheme = 0
-        // Pulsing accent overlay for top-tier speeds (cyan strobe)
-        this.themePulse = this.add.rectangle(240, 384, 480, 768, 0x00CCFF, 0).setDepth(0.76)
+        // Pulsing accent overlay for top-tier speeds — hidden until cosmic tier
+        this.themePulse = this.add.rectangle(240, 384, 480, 768, 0x00CCFF, 0).setDepth(0.76).setVisible(false)
 
-        // Parallax circuit layer (depth 0.5, very faint — scrolls 8× slower)
-        this.bgCircuit = this.add.tileSprite(240, 428, 480, 688, 'bgCircuit')
-          .setDepth(0.5).setAlpha(0.07)
+        // Parallax circuit layer — desktop only. On mobile it's a fullscreen
+        // textured layer at alpha 0.07 (near-invisible) for real fillrate cost.
+        if (!isMobile) {
+          this.bgCircuit = this.add.tileSprite(240, 428, 480, 688, 'bgCircuit')
+            .setDepth(0.5).setAlpha(0.07)
+        }
 
         // ── STARS ────────────────────────────────────────────────────────────
-        const starCount = isMobile ? 28 : 50
+        const starCount = isMobile ? 16 : 50
         this.stars = []
         for (let i = 0; i < starCount; i++) {
           const star = this.add.circle(
@@ -105,7 +111,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.add.rectangle(240, 736, 480, 16, 0x001444, 0.18).setDepth(3.0)
 
         // ── FOG / GROUND HAZE ────────────────────────────────────────────────
-        const fogCount = isMobile ? 3 : 5
+        // Cut on mobile — at alpha 0.025–0.065 it's invisible but each ellipse is
+        // its own draw call + a per-frame JS update. Pure cost, no benefit.
+        const fogCount = isMobile ? 0 : 5
         this.fogPool = []
         for (let i = 0; i < fogCount; i++) {
           const fog = this.add.ellipse(
@@ -121,7 +129,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
 
         // ── DATA-FLOW PARTICLES ──────────────────────────────────────────────
-        const dataCount = isMobile ? 5 : 8
+        const dataCount = isMobile ? 4 : 8
         this.dataFlow = []
         for (let i = 0; i < dataCount; i++) {
           const bright = i % 3 === 0
@@ -260,7 +268,6 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.shieldOuter = null
         this.magnetIcon = null
         this.magnetOuter = null
-        this.slowIcon = null
         this.doubleIcon = null
 
         this.lives = 3
@@ -744,11 +751,18 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           if (newTheme !== this.lastTheme) {
             this.lastTheme = newTheme
             this.themeOverlays.forEach((ov: any, i: number) => {
-              this.tweens.add({ targets: ov, alpha: newTheme === i + 1 ? 0.25 : 0, duration: 2000 })
+              const active = newTheme === i + 1
+              if (active) ov.setVisible(true)   // show before fading in
+              this.tweens.add({
+                targets: ov, alpha: active ? 0.25 : 0, duration: 2000,
+                // hide once faded out so it stops costing fullscreen overdraw
+                onComplete: () => { if (!active) ov.setVisible(false) }
+              })
             })
             // Cosmic tier: start pulsing cyan strobe
             if (newTheme === 5 && this.themePulse && !this.themePulseActive) {
               this.themePulseActive = true
+              this.themePulse.setVisible(true)
               this.tweens.add({
                 targets: this.themePulse, alpha: 0.12,
                 duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
@@ -756,7 +770,10 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             } else if (newTheme < 5 && this.themePulseActive) {
               this.themePulseActive = false
               this.tweens.killTweensOf(this.themePulse)
-              this.tweens.add({ targets: this.themePulse, alpha: 0, duration: 800 })
+              this.tweens.add({
+                targets: this.themePulse, alpha: 0, duration: 800,
+                onComplete: () => this.themePulse.setVisible(false)
+              })
             }
           }
         }
