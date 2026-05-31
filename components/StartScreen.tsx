@@ -315,7 +315,7 @@ export function StartScreen({
             </div>
           ) : (
             <button
-              onClick={onConnect}
+              onClick={() => onConnect()}
               style={{
                 background: 'transparent',
                 border: '1px solid rgba(0,82,255,0.5)',

@@ -172,19 +172,11 @@ export function useScoreSubmission() {
   }
 
   const connectWallet = (connector?: any) => {
-    let c = connector
-    if (!c) {
-      // On desktop with a browser-extension wallet (MetaMask etc.), prefer that —
-      // baseAccount (smart-wallet popup) often fails on plain desktop/localhost.
-      const hasInjected = typeof window !== 'undefined' && (window as any).ethereum
-      if (hasInjected) {
-        c = connectors.find(x => x.id === 'metaMask')
-          ?? connectors.find(x => x.id === 'injected')
-          ?? connectors[0]
-      } else {
-        c = connectors[0]
-      }
-    }
+    // Guard: when wired to a button's onClick the React event gets passed here —
+    // a real wagmi connector has a string `id`, an event does not. Ignore non-connectors.
+    const valid = connector && typeof connector.id === 'string' ? connector : undefined
+    // Only the injected connector is configured, so fall back to it.
+    const c = valid ?? connectors.find(x => x.id === 'injected') ?? connectors[0]
     if (c) connectWagmi({ connector: c })
   }
 

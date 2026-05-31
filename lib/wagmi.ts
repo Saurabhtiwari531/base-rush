@@ -1,6 +1,6 @@
 import { createConfig, createStorage, cookieStorage, http } from 'wagmi'
 import { base, baseSepolia } from 'wagmi/chains'
-import { baseAccount, coinbaseWallet, injected, metaMask } from 'wagmi/connectors'
+import { injected } from 'wagmi/connectors'
 import { QueryClient } from '@tanstack/react-query'
 
 // Public RPCs are fine for low traffic. For production load, set these env vars:
@@ -12,10 +12,7 @@ const baseRpc = process.env.NEXT_PUBLIC_RPC_BASE
 export const wagmiConfig = createConfig({
   chains: [base, baseSepolia],
   connectors: [
-    baseAccount({ appName: 'Base Rush' }),    // Base Account SDK — primary for Base app / smart wallet
-    injected(),                                // auto-detects any browser extension wallet
-    metaMask(),                                // explicit MetaMask
-    coinbaseWallet({ appName: 'Base Rush' }), // Coinbase Wallet fallback
+    injected(), // auto-detects the in-app/browser-extension wallet (Base App, MetaMask, Coinbase, etc.)
   ],
   // SSR: persist wallet state in cookies so server & client agree on first render
   storage: createStorage({ storage: cookieStorage }),
