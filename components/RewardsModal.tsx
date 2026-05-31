@@ -23,6 +23,8 @@ type DailyProps = {
   lastHash: string | null
   needsWallet: boolean
   prizeClaimedDay25: boolean
+  verifying: boolean
+  verifyError: string | null
   onCheckIn: () => void
   onClaimPrize: () => void
   onConnectWallet: () => void
@@ -352,16 +354,32 @@ function DailyTab(p: DailyProps) {
               ✅ PRIZE CLAIMED — Team will DM you
             </div>
           ) : (
-            <button
-              onClick={p.onClaimPrize}
-              style={{
-                marginTop: '10px', width: '100%',
-                background: '#000', color: '#FFD700',
-                border: '2px solid #FFD700', borderRadius: '10px',
-                padding: '10px', fontWeight: 'bold', fontSize: '13px',
-                letterSpacing: '2px', cursor: 'pointer',
-              }}
-            >🎁 CLAIM $5 PRIZE</button>
+            <>
+              <button
+                onClick={p.onClaimPrize}
+                disabled={p.verifying}
+                style={{
+                  marginTop: '10px', width: '100%',
+                  background: '#000', color: '#FFD700',
+                  border: '2px solid #FFD700', borderRadius: '10px',
+                  padding: '10px', fontWeight: 'bold', fontSize: '13px',
+                  letterSpacing: '2px', cursor: p.verifying ? 'default' : 'pointer',
+                  opacity: p.verifying ? 0.7 : 1,
+                }}
+              >{p.verifying ? '⏳ VERIFYING ON-CHAIN…' : '🎁 CLAIM $5 PRIZE'}</button>
+              <div style={{ color: '#000', fontSize: '9px', marginTop: '6px', opacity: 0.7 }}>
+                Verified against your on-chain check-ins (anti-cheat)
+              </div>
+              {p.verifyError && (
+                <div style={{
+                  marginTop: '8px', padding: '7px 9px',
+                  background: 'rgba(180,0,0,0.85)', borderRadius: '8px',
+                  color: '#fff', fontSize: '10px', fontWeight: 600, lineHeight: 1.35,
+                }}>
+                  ⚠️ {p.verifyError}
+                </div>
+              )}
+            </>
           )
         )}
       </div>

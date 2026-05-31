@@ -25,6 +25,37 @@ const DEFAULT_STATE: StreakState = {
 
 const KEY = 'baserush.streak.v1'
 
+// Count the wallet's real daily check-ins on Base (self-transfers, 0 value) by
+// distinct UTC day. Runs ONLY when claiming the prize — never during gameplay.
+// Uses the Etherscan V2 API (Base chainid 8453). Key optional but recommended.
+async function countOnChainCheckIns(address: string): Promise<{ ok: boolean; count: number }> {
+  const key = process.env.NEXT_PUBLIC_BASESCAN_API_KEY || ''
+  const url = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist`
+    + `&address=${address}&startblock=0&endblock=99999999&sort=desc`
+    + (key ? `&apikey=${key}` : '')
+  const res = await fetch(url)
+  const json = await res.json()
+  // status '0' with "No transactions found" is a valid (verified) empty result;
+  // a missing/invalid key or rate-limit means we couldn't verify → ok:false.
+  if (!Array.isArray(json.result)) {
+    const empty = typeof json.message === 'string' && /no transactions/i.test(json.message)
+    return { ok: empty, count: 0 }
+  }
+  const addr = address.toLowerCase()
+  const days = new Set<string>()
+  for (const tx of json.result) {
+    if (
+      tx.from?.toLowerCase() === addr &&
+      tx.to?.toLowerCase() === addr &&
+      tx.value === '0' &&
+      tx.isError === '0'
+    ) {
+      days.add(new Date(Number(tx.timeStamp) * 1000).toISOString().slice(0, 10))
+    }
+  }
+  return { ok: true, count: days.size }
+}
+
 function dateStr(d: Date) {
   return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
 }
@@ -42,6 +73,11 @@ export function useDailyStreak() {
   const { sendTransaction, data: hash, isPending: isSending, error: txError, reset } = useSendTransaction()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
   const processedRef = useRef<string | null>(null)
+
+  // Day-25 prize on-chain verification state (claim-time only)
+  const [verifying, setVerifying] = useState(false)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [verifiedCount, setVerifiedCount] = useState<number | null>(null)
 
   useEffect(() => {
     try {
@@ -96,9 +132,33 @@ export function useDailyStreak() {
 
   const resetTx = () => { reset(); processedRef.current = null }
 
-  const claimDay25Prize = () => {
-    if (state.streak < STREAK_TARGET_DAYS || state.prizeClaimedDay25) return
-    setState(prev => ({ ...prev, prizeClaimedDay25: true }))
+  // Verify the streak ON-CHAIN before allowing the claim, so a faked
+  // localStorage streak can't grab the prize. Runs only on button click.
+  const claimDay25Prize = async () => {
+    if (state.prizeClaimedDay25 || verifying) return
+    if (!address) { setVerifyError('Connect your wallet first.'); return }
+    if (state.streak < STREAK_TARGET_DAYS) {
+      setVerifyError(`Reach a ${STREAK_TARGET_DAYS}-day streak first.`); return
+    }
+    setVerifying(true)
+    setVerifyError(null)
+    try {
+      const { ok, count } = await countOnChainCheckIns(address)
+      setVerifiedCount(ok ? count : null)
+      if (!ok) {
+        // Explorer unreachable / no API key — don't block a legit player;
+        // the team verifies on BaseScan before paying out.
+        setState(prev => ({ ...prev, prizeClaimedDay25: true }))
+      } else if (count >= STREAK_TARGET_DAYS) {
+        setState(prev => ({ ...prev, prizeClaimedDay25: true }))
+      } else {
+        setVerifyError(`Only ${count} on-chain check-ins found — ${STREAK_TARGET_DAYS} required. Keep checking in daily!`)
+      }
+    } catch {
+      setVerifyError('Could not verify on-chain right now. Please try again in a moment.')
+    } finally {
+      setVerifying(false)
+    }
   }
 
   return {
@@ -119,5 +179,8 @@ export function useDailyStreak() {
     checkIn,
     resetTx,
     claimDay25Prize,
+    verifying,
+    verifyError,
+    verifiedCount,
   }
 }

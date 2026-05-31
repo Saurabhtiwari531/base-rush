@@ -254,6 +254,8 @@ export default function Home() {
             lastHash: streak.lastHash,
             needsWallet: streak.needsWallet,
             prizeClaimedDay25: streak.prizeClaimedDay25,
+            verifying: streak.verifying,
+            verifyError: streak.verifyError,
             onCheckIn: streak.checkIn,
             onClaimPrize: streak.claimDay25Prize,
             onConnectWallet: () => connectWallet(),
