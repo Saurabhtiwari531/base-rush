@@ -270,8 +270,10 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.magnetOuter = null
         this.doubleIcon = null
 
+        this.maxLives = 3
         this.lives = 3
-        this.livesText = this.add.text(468, 22, '❤️ ❤️ ❤️', { fontSize: '16px' }).setOrigin(1, 0.5).setDepth(10)
+        this.renderLives = () => '❤️'.repeat(Math.max(0, this.lives)) + '🖤'.repeat(Math.max(0, this.maxLives - this.lives))
+        this.livesText = this.add.text(470, 22, this.renderLives(), { fontSize: '16px' }).setOrigin(1, 0.5).setDepth(10)
 
         this.obstacles = this.physics.add.group({ maxSize: 15 })
         this.coins = this.physics.add.group({ maxSize: 60 })
@@ -420,10 +422,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             if (this.skinTint) this.basey.setTint(this.skinTint)
           })
 
-          if (this.lives === 2) this.livesText.setText('❤️ ❤️ 🖤')
-          if (this.lives === 1) this.livesText.setText('❤️ 🖤 🖤')
+          this.livesText.setText(this.renderLives())
           if (this.lives <= 0) {
-            this.livesText.setText('🖤 🖤 🖤')
             this.isGameOver = true
             this.physics.pause()
             // Explosion burst

@@ -328,6 +328,28 @@ export function GameOver({
           </button>
         )}
 
+        {/* Why-submit banner — shown while the player still needs to submit */}
+        {finalScore > 0 && !canReplay && !txPending && !isConfirming && !txError && (
+          <div style={{
+            display: 'flex', gap: '8px', alignItems: 'flex-start',
+            background: 'linear-gradient(135deg, rgba(0,82,255,0.18), rgba(255,215,0,0.06))',
+            border: '1px solid rgba(0,136,255,0.45)',
+            borderRadius: '10px', padding: '10px 12px', margin: '0 0 12px 0',
+            textAlign: 'left',
+          }}>
+            <span style={{ fontSize: '18px', lineHeight: 1 }}>⛓️</span>
+            <div>
+              <div style={{ color: '#FFD700', fontSize: '12px', fontWeight: 'bold', marginBottom: '2px' }}>
+                Save your score for Weekly Rewards
+              </div>
+              <div style={{ color: '#AEC6E8', fontSize: '10.5px', lineHeight: 1.4 }}>
+                Submit on-chain (one quick transaction on Base) to lock in your score.
+                Only saved scores qualify for the weekly 🏆 $5 / $3 / $1 leaderboard.
+              </div>
+            </div>
+          </div>
+        )}
+
         {txPending || isConfirming ? (
           <>
             <div style={{
