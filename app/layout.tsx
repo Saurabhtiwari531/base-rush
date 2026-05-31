@@ -69,6 +69,8 @@ export default async function RootLayout({
       <head>
         {/* Required for Base app store listing */}
         <meta name="base:app_id" content="6a1553a25ef088574244918b" />
+        {/* Talent Protocol project ownership verification */}
+        <meta name="talentapp:project_verification" content="77df654ff62cd67c527b369b3878b7c9e9e4cb434e67566ae187d992f06207e175991d62a815510115642b31fbc0192a2193c478724c7ed4f5a49b6f29f5a5af" />
       </head>
       <body>
         <Providers initialState={initialState}>
