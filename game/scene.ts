@@ -50,6 +50,19 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         const isMobile = window.innerWidth < 600
         this.isMobile = isMobile
 
+        // ── ADAPTIVE QUALITY ────────────────────────────────────────────────
+        // The Base App runs the game in an in-app WebView (like Telegram mini
+        // games) which can be slower than Chrome. We sample FPS and auto-scale
+        // decorative effects so weak phones / WebViews stay smooth. Gameplay
+        // never changes — only cosmetic density. Start mobile at 'medium'.
+        this.quality = isMobile ? 'medium' : 'high'
+        this.fxParticles = isMobile ? 5 : 8   // coin-burst particle count
+        this.fxStreaks = !isMobile            // speed streaks
+        this.fxShake = true                   // high-speed camera shake
+        this._fpsAccum = 0
+        this._fpsFrames = 0
+        this._qLockMs = 0                     // hysteresis: wait between changes
+
         // ── BACKGROUND ──────────────────────────────────────────────────────
         this.add.image(240, 384, 'bg').setDepth(0)
         // Speed-based theme overlays (fade in at 1.2 / 1.5 / 2.0 / 3.0 / 3.5).
@@ -488,7 +501,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.playCoinSound()
 
           // Particle burst — recycle from pool (3 on mobile, 6 desktop)
-          const pCount = this.isMobile ? 3 : 6
+          const pCount = this.fxParticles
           for (let i = 0; i < pCount; i++) {
             const angle = (Math.PI * 2 * i) / pCount
             const dist = Phaser.Math.Between(36, 70)
@@ -667,10 +680,41 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.runFrame = 0
         this.frameTimer = 0
         this.scoreSubmitted = false
+
+        // Apply a quality tier — scales only decorative density, never gameplay.
+        this.applyQuality = (tier: string) => {
+          this.quality = tier
+          const starShow = tier === 'low' ? 8 : tier === 'medium' ? 14 : (this.stars?.length || 0)
+          this.stars?.forEach((s: any, i: number) => s.setVisible(i < starShow))
+          const dfShow = tier === 'low' ? 0 : tier === 'medium' ? 2 : (this.dataFlow?.length || 0)
+          this.dataFlow?.forEach((d: any, i: number) => d.setVisible(i < dfShow))
+          this.fxParticles = tier === 'low' ? 3 : tier === 'medium' ? 5 : 8
+          this.fxStreaks = tier === 'high'
+          this.fxShake = tier !== 'low'
+        }
+        this.applyQuality(this.quality)
       },
 
       update: function (this: any, _t: number, delta: number) {
         if (this.isGameOver || this.isCountingDown) return
+
+        // ── ADAPTIVE QUALITY SAMPLING ───────────────────────────────────────
+        // Average FPS over ~1s, then step quality up/down with hysteresis so a
+        // slow WebView/phone sheds effects and a fast one keeps them.
+        this._fpsAccum += delta
+        this._fpsFrames++
+        this._qLockMs += delta
+        if (this._fpsAccum >= 1000) {
+          const fps = (this._fpsFrames * 1000) / this._fpsAccum
+          this._fpsAccum = 0
+          this._fpsFrames = 0
+          if (this._qLockMs >= 2000 && this.applyQuality) {
+            let tier = this.quality
+            if (fps < 32) tier = this.quality === 'high' ? 'medium' : 'low'
+            else if (fps > 52) tier = this.quality === 'low' ? 'medium' : 'high'
+            if (tier !== this.quality) { this.applyQuality(tier); this._qLockMs = 0 }
+          }
+        }
 
         if (this.activeMagnet) {
           this.coins.getChildren().forEach((coin: any) => {
@@ -810,12 +854,12 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           }
         })
 
-        if (this.speedMultiplier >= 2.5 && Math.random() < (this.isMobile ? 0.01 : 0.03)) {
+        if (this.fxShake && this.speedMultiplier >= 2.5 && Math.random() < (this.isMobile ? 0.01 : 0.03)) {
           this.cameras.main.shake(50, 0.002)
         }
 
-        // Speed streaks — horizontal light trails at high speed (desktop only, less frequent)
-        if (!this.isMobile && this.speedMultiplier >= 2.0 && Math.random() < 0.03 * (this.speedMultiplier - 1.5)) {
+        // Speed streaks — horizontal light trails at high speed (high quality only)
+        if (this.fxStreaks && this.speedMultiplier >= 2.0 && Math.random() < 0.03 * (this.speedMultiplier - 1.5)) {
           const sy = Phaser.Math.Between(80, 710)
           const sw = Phaser.Math.Between(25, 70)
           const alpha = Phaser.Math.FloatBetween(0.15, 0.35)
