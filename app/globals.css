@@ -25,6 +25,27 @@ body {
   font-family: var(--font-display), -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/* ── App-wide touch & smoothness ──────────────────────────────────────── */
+html, body {
+  /* Kill pull-to-refresh / rubber-band bounce that fights the gameplay swipes */
+  overscroll-behavior: none;
+}
+button { -webkit-tap-highlight-color: transparent; }
+
+/* The live play surface: disable browser touch gestures so every tap/swipe
+   goes straight to the game (no scroll/zoom tug-of-war) — much smoother jumps
+   and slides on phones. */
+.game-surface {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Press feedback for primary buttons — fires on touch via :active */
+.rh-press { transition: transform 0.08s ease; }
+.rh-press:active { transform: scale(0.96); }
+
 /* Font tokens used across game UI */
 :root {
   --ui-font: var(--font-display), -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -43,7 +64,7 @@ body {
   /* Brand text + divider drop out on mobile — the start screen already shows a
      giant BASE RUSH title, so the bar just keeps the functional pills. */
   .tb-brand, .tb-brand-divider { display: none !important; }
-  .tb-header { padding: 7px 10px !important; }
+  .tb-header { padding: 7px 10px !important; padding-top: calc(7px + env(safe-area-inset-top)) !important; }
   .tb-pill { font-size: 11px !important; padding: 5px 10px !important; }
   .tb-wallet { font-size: 10px !important; padding: 4px 8px !important; }
   .tb-disconnect { font-size: 10px !important; padding: 4px 8px !important; }

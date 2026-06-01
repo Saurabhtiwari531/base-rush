@@ -60,6 +60,8 @@ export function TopBar({
         background: 'rgba(0,0,30,0.95)',
         borderBottom: '1px solid #0044FF',
         padding: '8px 16px',
+        // Push the bar below the device notch on full-screen / Base-App webviews
+        paddingTop: 'calc(8px + env(safe-area-inset-top))',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
         {/* ── LEFT SIDE ── */}

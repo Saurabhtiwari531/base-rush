@@ -13,12 +13,16 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_HORIZONTALLY, // canvas sticks to top — no top gap
     },
-    // Steady 60fps via rAF; roundPixels avoids sub-pixel blitting cost on mobile
+    // Steady 60fps via rAF; Phaser's smoothStep evens out frame-delta spikes
     fps: { target: 60, min: 30, forceSetTimeOut: false },
     render: {
       antialias: !isMobile,
       powerPreference: 'high-performance',
-      roundPixels: true,
+      // roundPixels OFF for smooth motion. Basey moves only a fraction of a pixel
+      // per frame near the top of a jump; snapping render positions to whole
+      // pixels made that arc look steppy/jittery once the 480×768 canvas scales
+      // up to a phone screen. Sub-pixel positions interpolate smoothly instead.
+      roundPixels: false,
       // Phaser keeps batching; disable per-frame canvas clear hints not needed
       clearBeforeRender: true,
     },

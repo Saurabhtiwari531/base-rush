@@ -212,14 +212,15 @@ export function GameOver({
 
   return (
     <div style={{
-      position: 'absolute', top: '44px', left: 0, right: 0, bottom: 0,
+      position: 'absolute', top: 'calc(44px + env(safe-area-inset-top))', left: 0, right: 0, bottom: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(0,0,0,0.90)', zIndex: 200
+      background: 'rgba(0,0,0,0.90)', zIndex: 200, padding: '16px',
     }}>
-      <div style={{
-        background: 'rgba(0,8,32,0.98)', border: '2px solid #4444FF',
+      <div className="rh-modal-scroll" style={{
+        background: 'rgba(0,8,32,0.98)', border: '2px solid #0052FF',
         borderRadius: '16px', padding: '30px',
-        maxWidth: '340px', width: '90%', textAlign: 'center'
+        maxWidth: '340px', width: '90%', textAlign: 'center',
+        boxShadow: '0 0 40px rgba(0,82,255,0.25)',
       }}>
         <h1 style={{
           color: '#FF4444', fontSize: '32px', fontWeight: 'bold',
@@ -248,7 +249,7 @@ export function GameOver({
         <div style={{
           background: isNewBest
             ? 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,140,0,0.08))'
-            : 'rgba(68,68,255,0.2)',
+            : 'rgba(0,82,255,0.2)',
           border: isNewBest ? '1px solid rgba(255,215,0,0.4)' : 'none',
           borderRadius: '10px', padding: '12px', margin: '0 0 10px 0'
         }}>
@@ -290,8 +291,8 @@ export function GameOver({
               { lbl: 'POINTS/SEC', val: runStats.duration > 0 ? `${Math.floor(finalScore / runStats.duration)}` : '0', col: '#AAAAFF' },
             ].map(s => (
               <div key={s.lbl} style={{
-                background: 'rgba(68,68,255,0.10)',
-                border: '1px solid rgba(68,68,255,0.25)',
+                background: 'rgba(0,82,255,0.10)',
+                border: '1px solid rgba(0,82,255,0.25)',
                 borderRadius: '8px',
                 padding: '6px 4px',
               }}>
@@ -408,6 +409,7 @@ export function GameOver({
             )}
             <button
               onClick={onPlayAgain}
+              className="rh-press"
               style={{
                 background: '#2255FF', border: 'none', color: '#FFFFFF',
                 padding: '14px 32px', borderRadius: '10px',
@@ -424,6 +426,7 @@ export function GameOver({
             </p>
             <button
               onClick={() => submitScoreToChain(finalScore)}
+              className="rh-press"
               style={{
                 background: 'linear-gradient(135deg, #0052FF 0%, #0088FF 100%)',
                 border: 'none', color: '#FFFFFF',

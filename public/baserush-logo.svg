@@ -1,0 +1,156 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background radial -->
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%">
+      <stop offset="0%"  stop-color="#0A53FF"/>
+      <stop offset="42%" stop-color="#0A2A8C"/>
+      <stop offset="78%" stop-color="#021244"/>
+      <stop offset="100%" stop-color="#01081F"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#FFFFFF"/>
+      <stop offset="55%" stop-color="#DCE8FF"/>
+      <stop offset="100%" stop-color="#9FB8E8"/>
+    </linearGradient>
+    <linearGradient id="metalBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#EAF1FF"/>
+      <stop offset="100%" stop-color="#8AA6DC"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#04122E"/>
+      <stop offset="100%" stop-color="#0A2452"/>
+    </linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#FFFFFF"/>
+      <stop offset="52%" stop-color="#E8F1FF"/>
+      <stop offset="53%" stop-color="#1E9BFF"/>
+      <stop offset="100%" stop-color="#39C6FF"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9BE4FF"/>
+      <stop offset="100%" stop-color="#1E9BFF"/>
+    </linearGradient>
+    <radialGradient id="eye" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#CFF4FF"/>
+      <stop offset="55%" stop-color="#22D3FF"/>
+      <stop offset="100%" stop-color="#0A86E0"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+    <clipPath id="round"><rect x="0" y="0" width="1024" height="1024" rx="200"/></clipPath>
+  </defs>
+
+  <!-- ── BACKGROUND ── -->
+  <g clip-path="url(#round)">
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+
+    <!-- radial speed streaks -->
+    <g opacity="0.5">
+      <g fill="#5AB6FF" opacity="0.20">
+        <polygon points="512,430 1180,300 1180,360"/>
+        <polygon points="512,430 1180,470 1180,540"/>
+        <polygon points="512,430 1180,610 1180,700"/>
+        <polygon points="512,430 -160,300 -160,360"/>
+        <polygon points="512,430 -160,470 -160,540"/>
+        <polygon points="512,430 -160,620 -160,700"/>
+        <polygon points="512,430 360,-160 300,-160"/>
+        <polygon points="512,430 560,-160 620,-160"/>
+      </g>
+    </g>
+
+    <!-- central glow burst behind robot -->
+    <circle cx="512" cy="430" r="250" fill="#2E7BFF" opacity="0.55" filter="url(#softGlow)"/>
+
+    <!-- faint city blocks -->
+    <g fill="#0A3AA0" opacity="0.35">
+      <rect x="80" y="470" width="120" height="170" rx="10"/>
+      <rect x="824" y="500" width="120" height="150" rx="10"/>
+      <rect x="150" y="560" width="70" height="90" rx="8" fill="#0E59D8" opacity="0.5"/>
+    </g>
+
+    <!-- ground glow line -->
+    <rect x="0" y="700" width="1024" height="6" fill="#3AA0FF" opacity="0.8" filter="url(#glow)"/>
+    <rect x="0" y="700" width="1024" height="2" fill="#CFF0FF"/>
+
+    <!-- floating coins -->
+    <g filter="url(#glow)">
+      <circle cx="180" cy="380" r="34" fill="#FFD23F" stroke="#FFA000" stroke-width="6"/>
+      <circle cx="860" cy="360" r="40" fill="#FFD23F" stroke="#FFA000" stroke-width="7"/>
+    </g>
+    <text x="180" y="396" font-family="Arial, sans-serif" font-size="40" font-weight="900" fill="#A85C00" text-anchor="middle">B</text>
+    <text x="860" y="378" font-family="Arial, sans-serif" font-size="46" font-weight="900" fill="#A85C00" text-anchor="middle">B</text>
+
+    <!-- obstacle (spikes) bottom-right -->
+    <g fill="#0E63E6" filter="url(#glow)" opacity="0.9">
+      <polygon points="760,700 800,640 840,700"/>
+      <polygon points="840,700 880,640 920,700"/>
+    </g>
+
+    <!-- ════════ ROBOT MASCOT ════════ -->
+    <g filter="url(#glow)">
+      <!-- antenna -->
+      <rect x="505" y="120" width="14" height="70" rx="7" fill="url(#metal)"/>
+      <circle cx="512" cy="112" r="20" fill="url(#eye)"/>
+
+      <!-- ears -->
+      <circle cx="372" cy="300" r="30" fill="url(#metal)" stroke="#5C82C8" stroke-width="4"/>
+      <circle cx="652" cy="300" r="30" fill="url(#metal)" stroke="#5C82C8" stroke-width="4"/>
+      <circle cx="372" cy="300" r="12" fill="#0A2452"/>
+      <circle cx="652" cy="300" r="12" fill="#0A2452"/>
+
+      <!-- head -->
+      <rect x="360" y="185" width="304" height="240" rx="56" fill="url(#metal)" stroke="#6E92D6" stroke-width="6"/>
+      <!-- screen face -->
+      <rect x="392" y="220" width="240" height="170" rx="40" fill="url(#screen)" stroke="#1E9BFF" stroke-width="5"/>
+      <!-- eyes -->
+      <circle cx="466" cy="298" r="34" fill="url(#eye)"/>
+      <circle cx="558" cy="298" r="34" fill="url(#eye)"/>
+      <circle cx="476" cy="288" r="10" fill="#FFFFFF"/>
+      <circle cx="568" cy="288" r="10" fill="#FFFFFF"/>
+      <!-- smile -->
+      <path d="M468 345 Q512 378 556 345" fill="none" stroke="#22D3FF" stroke-width="9" stroke-linecap="round"/>
+
+      <!-- neck -->
+      <rect x="476" y="423" width="72" height="34" rx="12" fill="#9FB8E8"/>
+
+      <!-- body -->
+      <rect x="406" y="452" width="212" height="170" rx="46" fill="url(#metalBody)" stroke="#6E92D6" stroke-width="6"/>
+      <!-- Base logo on chest -->
+      <circle cx="512" cy="537" r="46" fill="#0A53FF"/>
+      <rect x="498" y="529" width="44" height="16" rx="8" fill="#FFFFFF"/>
+
+      <!-- left arm raised -->
+      <rect x="338" y="455" width="58" height="120" rx="29" fill="url(#metalBody)" stroke="#6E92D6" stroke-width="5" transform="rotate(-26 367 515)"/>
+      <circle cx="316" cy="430" r="34" fill="url(#metal)" stroke="#6E92D6" stroke-width="5"/>
+      <!-- right arm -->
+      <rect x="628" y="470" width="58" height="120" rx="29" fill="url(#metalBody)" stroke="#6E92D6" stroke-width="5" transform="rotate(22 657 530)"/>
+      <circle cx="690" cy="585" r="34" fill="url(#metal)" stroke="#6E92D6" stroke-width="5"/>
+
+      <!-- running legs -->
+      <rect x="430" y="612" width="60" height="92" rx="28" fill="url(#metalBody)" stroke="#6E92D6" stroke-width="5" transform="rotate(16 460 658)"/>
+      <rect x="540" y="612" width="60" height="86" rx="28" fill="url(#metalBody)" stroke="#6E92D6" stroke-width="5" transform="rotate(-22 570 655)"/>
+      <ellipse cx="430" cy="712" rx="46" ry="22" fill="#0A2452"/>
+      <ellipse cx="600" cy="700" rx="46" ry="22" fill="#0A2452"/>
+    </g>
+
+    <!-- ════════ WORDMARK ════════ -->
+    <g>
+      <!-- lightning bolt behind text -->
+      <path d="M470 742 L540 742 L505 800 L560 800 L450 920 L495 818 L445 818 Z"
+            fill="url(#bolt)" filter="url(#glow)" opacity="0.95"/>
+
+      <text x="512" y="892" font-family="Arial Black, Arial, sans-serif" font-size="150"
+            font-weight="900" fill="url(#word)" text-anchor="middle"
+            stroke="#02163F" stroke-width="8" paint-order="stroke"
+            letter-spacing="2" style="font-style:italic">BASE<tspan fill="url(#word)">RUSH</tspan></text>
+    </g>
+
+    <!-- inner border -->
+    <rect x="6" y="6" width="1012" height="1012" rx="196" fill="none" stroke="#2E7BFF" stroke-width="10" opacity="0.7"/>
+  </g>
+</svg>

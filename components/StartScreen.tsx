@@ -50,10 +50,16 @@ export function StartScreen({
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       minHeight: '100dvh', width: '100%',
-      background: 'radial-gradient(ellipse at top, #0a0a2e 0%, #000000 60%)',
+      // Deeper, bluer Base-navy gradient — matches the in-game background so the
+      // start screen and gameplay feel like one cohesive world.
+      background: 'radial-gradient(ellipse at 50% 0%, #08193f 0%, #030a1e 45%, #00040c 100%)',
+      // Clear the fixed TopBar + device notch; let tall content scroll on small
+      // phones instead of clipping off-screen.
       padding: '20px',
+      paddingTop: 'calc(56px + env(safe-area-inset-top))',
+      paddingBottom: 'calc(28px + env(safe-area-inset-bottom))',
       fontFamily: '"Courier New", monospace',
-      position: 'relative', overflow: 'hidden',
+      position: 'relative', overflowX: 'hidden', overflowY: 'auto',
     }}>
       {/* Animated stars background */}
       <div style={{
@@ -319,6 +325,7 @@ export function StartScreen({
         {/* PLAY button */}
         <button
           onClick={onStart}
+          className="rh-press"
           style={{
             background: 'linear-gradient(135deg, #0052FF 0%, #0088FF 100%)',
             border: 'none', color: '#FFFFFF',

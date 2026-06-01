@@ -348,6 +348,7 @@ export default function Home() {
         />
       ) : (
         <div
+          className="game-surface"
           style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             background: 'radial-gradient(ellipse at 50% 30%, #020E2C 0%, #000810 70%, #000408 100%)',
@@ -372,7 +373,7 @@ export default function Home() {
             ))}
             {/* Bottom branding strip */}
             <div style={{
-              position: 'absolute', bottom: '10px', left: 0, right: 0,
+              position: 'absolute', bottom: 'calc(10px + env(safe-area-inset-bottom))', left: 0, right: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             }}>
               <div style={{ width: '30px', height: '1px', background: 'rgba(0,68,255,0.25)' }} />
@@ -385,12 +386,12 @@ export default function Home() {
 
           {/* Desktop side-area glow — visible in letterbox beside the canvas on wide screens */}
           <div style={{
-            position: 'absolute', top: '44px', left: 0, bottom: 0, width: '22%',
+            position: 'absolute', top: 'calc(44px + env(safe-area-inset-top))', left: 0, bottom: 0, width: '22%',
             background: 'radial-gradient(ellipse at right center, rgba(0,60,200,0.12) 0%, transparent 70%)',
             pointerEvents: 'none', zIndex: 2,
           }} />
           <div style={{
-            position: 'absolute', top: '44px', right: 0, bottom: 0, width: '22%',
+            position: 'absolute', top: 'calc(44px + env(safe-area-inset-top))', right: 0, bottom: 0, width: '22%',
             background: 'radial-gradient(ellipse at left center, rgba(0,60,200,0.12) 0%, transparent 70%)',
             pointerEvents: 'none', zIndex: 2,
           }} />
@@ -398,12 +399,12 @@ export default function Home() {
           {/* Phaser mounts here — full area below TopBar, sits above background layer */}
           <div
             ref={gameRef}
-            style={{ position: 'absolute', top: '44px', left: 0, right: 0, bottom: 0, zIndex: 1 }}
+            style={{ position: 'absolute', top: 'calc(44px + env(safe-area-inset-top))', left: 0, right: 0, bottom: 0, zIndex: 1 }}
           />
 
           {gameLoading && (
             <div style={{
-              position: 'absolute', top: '44px', left: 0, right: 0, bottom: 0,
+              position: 'absolute', top: 'calc(44px + env(safe-area-inset-top))', left: 0, right: 0, bottom: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'radial-gradient(ellipse at top, #020E2C, #000408)', zIndex: 300
             }}>
@@ -441,6 +442,7 @@ export default function Home() {
               </h2>
               <button
                 onClick={togglePause}
+                className="rh-press"
                 style={{
                   background: 'linear-gradient(135deg, #0052FF, #0088FF)',
                   border: 'none', color: '#FFF',
