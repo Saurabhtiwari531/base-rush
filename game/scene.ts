@@ -28,7 +28,15 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
     },
     physics: {
       default: 'arcade',
-      arcade: { gravity: { x: 0, y: 1500 }, debug: false }
+      arcade: {
+        gravity: { x: 0, y: 1500 },
+        debug: false,
+        // Sync physics to the real render rate instead of a fixed 60 Hz step.
+        // On 90/120 Hz phones a fixed 60 Hz step moves the sprite only every
+        // other frame → subtle judder on the smooth vertical jump arc. Stepping
+        // every rendered frame makes the jump arc smooth at any refresh rate.
+        fixedStep: false,
+      }
     },
     scene: {
       preload: function (this: any) {

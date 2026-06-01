@@ -58,7 +58,9 @@ export function StartScreen({
       padding: '20px',
       paddingTop: 'calc(56px + env(safe-area-inset-top))',
       paddingBottom: 'calc(28px + env(safe-area-inset-bottom))',
-      fontFamily: '"Courier New", monospace',
+      // Use the app's premium display font (was Courier New, which read as cheap)
+      // so the start screen matches the polished look of the rest of the app.
+      fontFamily: 'var(--ui-font)',
       position: 'relative', overflowX: 'hidden', overflowY: 'auto',
     }}>
       {/* Animated stars background */}
@@ -335,6 +337,8 @@ export function StartScreen({
             boxShadow: '0 4px 24px rgba(0,82,255,0.5), 0 0 0 1px rgba(0,136,255,0.3)',
             letterSpacing: '3px',
             transition: 'transform 0.1s',
+            // Gentle "breathing" glow so the primary CTA feels alive / premium
+            animation: 'ctaPulse 2.4s ease-in-out infinite',
           }}
           onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.97)')}
           onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
@@ -378,6 +382,10 @@ export function StartScreen({
           @keyframes ticker {
             0%   { transform: translateX(0); }
             100% { transform: translateX(-50%); }
+          }
+          @keyframes ctaPulse {
+            0%, 100% { box-shadow: 0 4px 22px rgba(0,82,255,0.45), 0 0 0 1px rgba(0,136,255,0.30); }
+            50%      { box-shadow: 0 6px 34px rgba(0,130,255,0.80), 0 0 0 1px rgba(0,160,255,0.55); }
           }
         `}</style>
         <div style={{
