@@ -23,6 +23,7 @@ type DailyProps = {
   txHash: `0x${string}` | undefined
   lastHash: string | null
   needsWallet: boolean
+  dailyCoins: number
   boxOpened: boolean
   boxReward: BoxReward | null
   verifying: boolean
@@ -239,10 +240,10 @@ function DailyTab(p: DailyProps) {
           }}
         >
           <span style={{ fontSize: '15px', letterSpacing: '3px' }}>
-            ⚡ CHECK IN ON BASE
+            ⚡ CHECK IN · EARN +{p.dailyCoins} 🪙
           </span>
           <span style={{ fontSize: '9px', letterSpacing: '2px', opacity: 0.8 }}>
-            COSTS ~$0.0001 GAS
+            ~$0.0001 GAS · KEEPS YOUR STREAK
           </span>
         </button>
       )}

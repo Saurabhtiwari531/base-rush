@@ -84,6 +84,8 @@ export function useDailyStreak() {
   const [verifying, setVerifying] = useState(false)
   const [verifyError, setVerifyError] = useState<string | null>(null)
   const [verifiedCount, setVerifiedCount] = useState<number | null>(null)
+  // Bumps once per successful daily check-in (session signal for coin reward)
+  const [checkInNonce, setCheckInNonce] = useState(0)
 
   const addrKey = address ? address.toLowerCase() : ''
   // Active streak = the connected wallet's record (each wallet tracks its own).
@@ -126,6 +128,8 @@ export function useDailyStreak() {
           lastHash: hash,
         }
       })
+      // Signal a real new check-in so the page can grant the daily coin reward
+      setCheckInNonce(n => n + 1)
     }
   }, [isSuccess, hash])
 
@@ -197,6 +201,7 @@ export function useDailyStreak() {
     resetTx,
     verifyStreak,
     markBoxOpened,
+    checkInNonce,
     boxOpened: state.prizeClaimedDay25,
     boxRewardId: state.boxRewardId,
     verifying,

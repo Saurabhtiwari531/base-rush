@@ -17,6 +17,8 @@ import { usePerks } from '../hooks/usePerks'
 import { rollReward, getRewardById, type BoxReward } from '../lib/mysteryBox'
 import { createGameConfig } from '../game/scene'
 
+// Coins granted for each successful daily check-in (the daily streak carrot)
+const DAILY_CHECKIN_COINS = 100
 
 export default function Home() {
   const gameRef = useRef<HTMLDivElement>(null)
@@ -117,6 +119,15 @@ export default function Home() {
       unlockOnChainAch()
     }
   }, [canReplay, unlockOnChainAch])
+
+  // Reward coins for each successful daily check-in (drives the streak habit)
+  const prevCheckInNonce = useRef(0)
+  useEffect(() => {
+    if (streak.checkInNonce > prevCheckInNonce.current) {
+      prevCheckInNonce.current = streak.checkInNonce
+      wallet.addCoins(DAILY_CHECKIN_COINS)
+    }
+  }, [streak.checkInNonce, wallet])
 
   // Phaser game init
   useEffect(() => {
@@ -274,6 +285,7 @@ export default function Home() {
             txHash: streak.txHash,
             lastHash: streak.lastHash,
             needsWallet: streak.needsWallet,
+            dailyCoins: DAILY_CHECKIN_COINS,
             boxOpened: streak.boxOpened,
             boxReward: boxReveal ?? getRewardById(streak.boxRewardId),
             verifying: streak.verifying,
@@ -329,6 +341,7 @@ export default function Home() {
           hasCheckedInToday={streak.hasCheckedInToday}
           coinBalance={wallet.balance}
           equippedSkin={skins.equippedSkin}
+          dailyCoins={DAILY_CHECKIN_COINS}
           onOpenDaily={() => { setRewardsInitialTab('daily'); setShowRewards(true) }}
           onOpenSkins={() => { setRewardsInitialTab('skins'); setShowRewards(true) }}
           onOpenHowItWorks={() => { setRewardsInitialTab('how'); setShowRewards(true) }}

@@ -14,12 +14,14 @@ type Props = {
   hasCheckedInToday: boolean
   coinBalance: number
   equippedSkin: Skin
+  dailyCoins: number
   onOpenDaily: () => void
   onOpenSkins: () => void
   onOpenHowItWorks: () => void
 }
 
 const TOTAL_ACHIEVEMENTS = 16
+const STREAK_TARGET = 25
 
 const trayBtn: React.CSSProperties = {
   background: 'rgba(0,82,255,0.08)',
@@ -40,7 +42,7 @@ const trayValue: React.CSSProperties = {
 export function StartScreen({
   onStart, isConnected, address, onConnect, personalBest,
   achievementsUnlocked, onShowAchievements,
-  streak, hasCheckedInToday, coinBalance, equippedSkin,
+  streak, hasCheckedInToday, coinBalance, equippedSkin, dailyCoins,
   onOpenDaily, onOpenSkins, onOpenHowItWorks,
 }: Props) {
   return (
@@ -234,15 +236,45 @@ export function StartScreen({
             <div style={{
               fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
               color: hasCheckedInToday ? '#00C853' : '#FFAA00',
-              marginBottom: '1px',
+              marginBottom: '2px',
             }}>
-              {hasCheckedInToday ? 'STREAK ACTIVE TODAY' : streak > 0 ? 'CHECK IN ON BASE' : 'START DAILY STREAK'}
+              {hasCheckedInToday
+                ? 'STREAK ACTIVE TODAY'
+                : streak > 0
+                  ? "DON'T LOSE YOUR STREAK!"
+                  : 'START DAILY STREAK'}
             </div>
-            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 'bold', lineHeight: 1 }}>
-              {streak > 0 ? `🔥 ${streak}-day streak` : 'Day 25 = $5 prize 💵'}
+            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 'bold', lineHeight: 1.1 }}>
+              {streak > 0
+                ? `🔥 ${streak}-day streak · ${Math.min(streak, STREAK_TARGET)}/${STREAK_TARGET}`
+                : '🎁 Reach Day 25 → Mystery Box'}
+            </div>
+
+            {/* Progress bar toward the Day-25 Mystery Box */}
+            {streak > 0 && (
+              <div style={{
+                width: '100%', height: '4px', marginTop: '5px',
+                background: 'rgba(255,255,255,0.12)', borderRadius: '2px', overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: `${Math.min(100, (streak / STREAK_TARGET) * 100)}%`, height: '100%',
+                  background: 'linear-gradient(90deg, #FF8A00, #FFD700)',
+                }} />
+              </div>
+            )}
+
+            <div style={{
+              color: hasCheckedInToday ? '#88BB99' : '#FFC980',
+              fontSize: '9px', marginTop: streak > 0 ? '4px' : '3px',
+            }}>
+              {hasCheckedInToday
+                ? '✓ Come back tomorrow to keep it alive'
+                : streak > 0
+                  ? `Check in today → +${dailyCoins} 🪙`
+                  : `+${dailyCoins} 🪙 every day · 🎁 box at Day 25`}
             </div>
           </div>
-          <span style={{ color: '#fff', fontSize: '16px' }}>›</span>
+          <span style={{ color: '#fff', fontSize: '16px', alignSelf: 'center' }}>›</span>
         </button>
 
         {/* 3-column tray: Achievements · Skins · Best */}
