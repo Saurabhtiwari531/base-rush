@@ -187,7 +187,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             onComplete: () => { pulse.destroy(); trail.destroy() }
           })
         }
-        // Random interval 2.5–6 s
+        // Random interval 2.5–6 s — desktop only (per-frame onUpdate tween +
+        // object churn isn't worth it on mobile/WebView).
         const schedulePulse = () => {
           if (this.isGameOver) return
           this.time.delayedCall(Phaser.Math.Between(2500, 6000), () => {
@@ -195,7 +196,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             schedulePulse()
           })
         }
-        schedulePulse()
+        if (!isMobile) schedulePulse()
 
         // HUD: distance counter (center top) — replaces decorative title for live info
         this.distanceText = this.add.text(240, 22, '0 m', {
@@ -554,14 +555,24 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         })
 
         // Jump effect
+        // Grab a recycled particle from the shared pool (no per-jump allocation)
+        const grabParticle = () => {
+          const p = this.particlePool[this.particleIdx]
+          this.particleIdx = (this.particleIdx + 1) % this.particlePool.length
+          this.tweens.killTweensOf(p)
+          return p
+        }
+
         const jumpEffect = () => {
-          for (let i = 0; i < 8; i++) {
-            const p = this.add.circle(
-              this.basey.x + Phaser.Math.Between(-16, 16),
-              this.basey.y + 28,
-              Phaser.Math.Between(2, 5), 0x00FFFF, 0.9
-            )
-            this.tweens.add({ targets: p, y: p.y + 22, alpha: 0, scaleX: 0.3, scaleY: 0.3, duration: 380, onComplete: () => p.destroy() })
+          const n = this.isMobile ? 4 : 6
+          for (let i = 0; i < n; i++) {
+            const px = this.basey.x + Phaser.Math.Between(-16, 16)
+            const py = this.basey.y + 28
+            const p = grabParticle()
+            p.setPosition(px, py).setFillStyle(0x00FFFF, 0.9)
+              .setScale(1).setAlpha(0.9).setVisible(true).setActive(true)
+            this.tweens.add({ targets: p, y: py + 22, alpha: 0, scaleX: 0.3, scaleY: 0.3,
+              duration: 380, onComplete: () => p.setVisible(false).setActive(false) })
           }
         }
 
@@ -573,20 +584,19 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             jumpEffect()
             this.playJumpSound()
           } else if (this.jumpCount === 1) {
-            // Double jump — slightly weaker, pink ring burst
+            // Double jump — slightly weaker, pink ring burst (pooled)
             this.basey.setVelocityY(-520)
             this.jumpCount = 2
-            for (let i = 0; i < 10; i++) {
-              const a = (Math.PI * 2 * i) / 10
-              const p = this.add.circle(
-                this.basey.x + Math.cos(a) * 10,
-                this.basey.y + Math.sin(a) * 10,
-                3, 0xFF00FF, 0.9
-              ).setDepth(5)
+            const n = this.isMobile ? 6 : 8
+            for (let i = 0; i < n; i++) {
+              const a = (Math.PI * 2 * i) / n
+              const p = grabParticle()
+              p.setPosition(this.basey.x + Math.cos(a) * 10, this.basey.y + Math.sin(a) * 10)
+                .setFillStyle(0xFF00FF, 0.9).setScale(1).setAlpha(0.9).setVisible(true).setActive(true)
               this.tweens.add({ targets: p,
                 x: this.basey.x + Math.cos(a) * 34,
                 y: this.basey.y + Math.sin(a) * 34,
-                alpha: 0, duration: 320, onComplete: () => p.destroy() })
+                alpha: 0, duration: 320, onComplete: () => p.setVisible(false).setActive(false) })
             }
             this.playJumpSound()
           }
@@ -647,7 +657,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         const nextCount = () => {
           if (ci >= countItems.length) {
             this.isCountingDown = false
-            this.startBGM?.()
+            // BGM only on desktop — on mobile/WebView the per-note Web Audio
+            // scheduler causes micro-stutter, so we skip it for smoothness.
+            if (!this.isMobile) this.startBGM?.()
             this.tweens.add({ targets: countdownDim, alpha: 0, duration: 250,
               onComplete: () => countdownDim.destroy() })
             return

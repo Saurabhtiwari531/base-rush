@@ -21,7 +21,9 @@ export function useLeaderboard() {
     address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CONTRACT_ABI,
     functionName: 'getTop3',
-    query: { refetchInterval: 60000 },
+    // No background polling — refetched on demand (modal open / after submit).
+    // The 60s auto-poll caused a periodic React re-render that hitched gameplay.
+    query: { staleTime: 30000 },
   })
 
   const leaderboard = useMemo<LeaderboardEntry[]>(() => {
