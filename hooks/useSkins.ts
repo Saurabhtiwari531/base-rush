@@ -11,7 +11,7 @@ export type Skin = {
   price: number             // 0 = free; ignored if unlock is set
   tint: number              // hex color applied to player sprite
   rarity: SkinRarity
-  unlock?: 'free' | 'streak25'
+  unlock?: 'free' | 'streak25' | 'box'
 }
 
 export const SKINS: Skin[] = [
@@ -39,6 +39,11 @@ export const SKINS: Skin[] = [
     id: 'dragon', name: 'Dragon Basey', icon: '🐉',
     desc: 'Day-25 streak exclusive',
     price: 0, tint: 0xFF3300, rarity: 'legendary', unlock: 'streak25',
+  },
+  {
+    id: 'champion', name: 'Champion Basey', icon: '🏆',
+    desc: 'Only from the Day-25 Mystery Box',
+    price: 0, tint: 0xFFC400, rarity: 'legendary', unlock: 'box',
   },
 ]
 

@@ -209,6 +209,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         this.score = 0
         this.lastScoreDisplay = 0
+        // Permanent score boost earned from rewards (1.0 = none, 1.1 = +10%)
+        this.scoreBoost = (window as any).__brScoreBoost || 1
         this.scoreText = this.add.text(14, 40, 'SCORE  0', {
           fontSize: '13px', color: '#FFFFFF', fontStyle: 'bold'
         }).setDepth(10)
@@ -690,7 +692,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         // Reset double jump when landing
         if (this.basey.body.blocked.down) this.jumpCount = 0
 
-        this.score += 0.08 * this.speedMultiplier
+        this.score += 0.08 * this.speedMultiplier * this.scoreBoost
         this.gameTime += delta
         // Distance: pixels travelled / 30 = meters (feels right for the canvas scale)
         this.distance += (this.obstacleSpeed * delta) / (1000 * 30)

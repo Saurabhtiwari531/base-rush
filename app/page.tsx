@@ -13,6 +13,8 @@ import { useAchievements } from '../hooks/useAchievements'
 import { useDailyStreak } from '../hooks/useDailyStreak'
 import { useCoinWallet } from '../hooks/useCoinWallet'
 import { useSkins, type Skin } from '../hooks/useSkins'
+import { usePerks } from '../hooks/usePerks'
+import { rollReward, getRewardById, type BoxReward } from '../lib/mysteryBox'
 import { createGameConfig } from '../game/scene'
 
 
@@ -31,9 +33,25 @@ export default function Home() {
   const streak = useDailyStreak()
   const wallet = useCoinWallet()
   const skins = useSkins()
+  const perks = usePerks()
+  const [boxReveal, setBoxReveal] = useState<BoxReward | null>(null)
   const [runStats, setRunStats] = useState<{
     distance: number; coins: number; topCombo: number; duration: number; topSpeed: number
   } | null>(null)
+
+  // Open the Day-25 Mystery Box: verify streak on-chain, then roll + apply an
+  // in-game reward. No real money involved.
+  const openMysteryBox = async () => {
+    const ok = await streak.verifyStreak()
+    if (!ok) return
+    const reward = rollReward()
+    if (reward.type === 'coins' && reward.amount) wallet.addCoins(reward.amount)
+    else if (reward.type === 'skin') { skins.claim('champion'); skins.equip('champion') }
+    else if (reward.type === 'boost') perks.addScoreBoost(0.1)
+    else if (reward.type === 'badge') perks.addBadge('legend25')
+    streak.markBoxOpened(reward.id)
+    setBoxReveal(reward)
+  }
   const runFinalizedRef = useRef(false)
   const chainAchUnlockedRef = useRef(false)
   const {
@@ -105,6 +123,9 @@ export default function Home() {
     if (!gameStarted) return
     setGameLoading(true)
     let game: any
+
+    // Expose earned score boost to the game (read once at scene create)
+    ;(window as any).__brScoreBoost = perks.scoreBoost
 
     const initGame = async () => {
       const Phaser = (await import('phaser')).default
@@ -253,11 +274,12 @@ export default function Home() {
             txHash: streak.txHash,
             lastHash: streak.lastHash,
             needsWallet: streak.needsWallet,
-            prizeClaimedDay25: streak.prizeClaimedDay25,
+            boxOpened: streak.boxOpened,
+            boxReward: boxReveal ?? getRewardById(streak.boxRewardId),
             verifying: streak.verifying,
             verifyError: streak.verifyError,
             onCheckIn: streak.checkIn,
-            onClaimPrize: streak.claimDay25Prize,
+            onOpenBox: openMysteryBox,
             onConnectWallet: () => connectWallet(),
             onResetTx: streak.resetTx,
           }}

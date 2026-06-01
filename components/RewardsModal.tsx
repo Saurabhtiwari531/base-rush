@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { STREAK_TARGET_DAYS, PRIZE_USD } from '../hooks/useDailyStreak'
+import { STREAK_TARGET_DAYS } from '../hooks/useDailyStreak'
 import { SKINS, type Skin, type SkinRarity } from '../hooks/useSkins'
+import { type BoxReward, RARITY_COLOR as BOX_RARITY_COLOR } from '../lib/mysteryBox'
 
 type Tab = 'daily' | 'skins' | 'how'
 
@@ -22,11 +23,12 @@ type DailyProps = {
   txHash: `0x${string}` | undefined
   lastHash: string | null
   needsWallet: boolean
-  prizeClaimedDay25: boolean
+  boxOpened: boolean
+  boxReward: BoxReward | null
   verifying: boolean
   verifyError: string | null
   onCheckIn: () => void
-  onClaimPrize: () => void
+  onOpenBox: () => void
   onConnectWallet: () => void
   onResetTx: () => void
 }
@@ -318,69 +320,92 @@ function DailyTab(p: DailyProps) {
         </div>
       </div>
 
-      {/* Day 25 prize banner */}
+      {/* Day 25 Mystery Box */}
       <div style={{
         background: reachedTarget
-          ? 'linear-gradient(135deg, #FFD700 0%, #FF6B00 50%, #FFD700 100%)'
-          : 'linear-gradient(135deg, #2a1500 0%, #1a0800 100%)',
+          ? 'linear-gradient(135deg, #3a1d6e 0%, #6b1fa8 50%, #3a1d6e 100%)'
+          : 'linear-gradient(135deg, #15102e 0%, #0c0820 100%)',
         backgroundSize: '200% auto',
-        border: `2px solid ${reachedTarget ? '#FFD700' : 'rgba(255,215,0,0.35)'}`,
+        border: `2px solid ${reachedTarget ? '#B043FF' : 'rgba(176,67,255,0.3)'}`,
         borderRadius: '14px',
-        padding: '14px',
+        padding: '16px 14px',
         textAlign: 'center',
         animation: reachedTarget ? 'shimmerBg 3s linear infinite' : undefined,
-        boxShadow: reachedTarget ? '0 0 30px rgba(255,215,0,0.5)' : 'none',
+        boxShadow: reachedTarget ? '0 0 30px rgba(176,67,255,0.5)' : 'none',
       }}>
-        <div style={{ fontSize: '22px', marginBottom: '4px' }}>🏆</div>
-        <div style={{
-          color: reachedTarget ? '#000' : '#FFD700',
-          fontWeight: 900, fontSize: '15px', letterSpacing: '2px',
-        }}>
-          DAY {STREAK_TARGET_DAYS} GRAND PRIZE
-        </div>
-        <div style={{
-          color: reachedTarget ? '#000' : '#FFA500',
-          fontSize: '24px', fontWeight: 900, marginTop: '4px',
-        }}>
-          💵 ${PRIZE_USD} BONUS!
-        </div>
-        {reachedTarget && (
-          p.prizeClaimedDay25 ? (
+        {p.boxOpened && p.boxReward ? (
+          // ── REVEALED REWARD ──
+          <div style={{ animation: 'rewardModalIn 0.4s ease-out' }}>
             <div style={{
-              marginTop: '10px', padding: '8px',
-              background: 'rgba(0,0,0,0.3)', borderRadius: '8px',
-              color: '#fff', fontSize: '11px', fontWeight: 'bold',
+              fontSize: '10px', letterSpacing: '2px', fontWeight: 700,
+              color: BOX_RARITY_COLOR[p.boxReward.rarity], marginBottom: '6px',
             }}>
-              ✅ PRIZE CLAIMED — Team will DM you
+              🎉 YOU WON · {p.boxReward.rarity.toUpperCase()}
             </div>
-          ) : (
-            <>
-              <button
-                onClick={p.onClaimPrize}
-                disabled={p.verifying}
-                style={{
-                  marginTop: '10px', width: '100%',
-                  background: '#000', color: '#FFD700',
-                  border: '2px solid #FFD700', borderRadius: '10px',
-                  padding: '10px', fontWeight: 'bold', fontSize: '13px',
-                  letterSpacing: '2px', cursor: p.verifying ? 'default' : 'pointer',
-                  opacity: p.verifying ? 0.7 : 1,
-                }}
-              >{p.verifying ? '⏳ VERIFYING ON-CHAIN…' : '🎁 CLAIM $5 PRIZE'}</button>
-              <div style={{ color: '#000', fontSize: '9px', marginTop: '6px', opacity: 0.7 }}>
-                Verified against your on-chain check-ins (anti-cheat)
-              </div>
-              {p.verifyError && (
-                <div style={{
-                  marginTop: '8px', padding: '7px 9px',
-                  background: 'rgba(180,0,0,0.85)', borderRadius: '8px',
-                  color: '#fff', fontSize: '10px', fontWeight: 600, lineHeight: 1.35,
-                }}>
-                  ⚠️ {p.verifyError}
+            <div style={{
+              fontSize: '54px', lineHeight: 1, margin: '4px 0',
+              filter: `drop-shadow(0 0 16px ${BOX_RARITY_COLOR[p.boxReward.rarity]})`,
+              animation: 'flameFlicker 1.6s ease-in-out infinite',
+            }}>{p.boxReward.icon}</div>
+            <div style={{ color: '#fff', fontWeight: 900, fontSize: '18px' }}>
+              {p.boxReward.label}
+            </div>
+            <div style={{ color: '#C2D2E6', fontSize: '11px', marginTop: '3px' }}>
+              {p.boxReward.desc}
+            </div>
+            <div style={{
+              marginTop: '10px', padding: '6px',
+              background: 'rgba(0,200,80,0.15)', border: '1px solid rgba(0,200,80,0.4)',
+              borderRadius: '8px', color: '#00FF88', fontSize: '10px', fontWeight: 700,
+            }}>
+              ✅ Added to your account
+            </div>
+          </div>
+        ) : (
+          // ── UNOPENED BOX ──
+          <>
+            <div style={{
+              fontSize: '40px', marginBottom: '4px',
+              animation: reachedTarget ? 'achIconBounce 1.4s ease-in-out infinite' : undefined,
+              filter: reachedTarget ? 'drop-shadow(0 0 14px #B043FF)' : 'grayscale(0.4)',
+            }}>🎁</div>
+            <div style={{ color: '#E6D4FF', fontWeight: 900, fontSize: '15px', letterSpacing: '2px' }}>
+              DAY {STREAK_TARGET_DAYS} MYSTERY BOX
+            </div>
+            <div style={{ color: '#B98CFF', fontSize: '11px', marginTop: '4px', lineHeight: 1.4 }}>
+              Reach a {STREAK_TARGET_DAYS}-day streak to open it.<br/>
+              Win coins, an exclusive skin, a score boost or a legend badge!
+            </div>
+            {reachedTarget && (
+              <>
+                <button
+                  onClick={p.onOpenBox}
+                  disabled={p.verifying}
+                  style={{
+                    marginTop: '12px', width: '100%',
+                    background: 'linear-gradient(135deg, #B043FF, #6b1fa8)',
+                    color: '#fff', border: '2px solid #D9A9FF', borderRadius: '10px',
+                    padding: '11px', fontWeight: 'bold', fontSize: '13px',
+                    letterSpacing: '2px', cursor: p.verifying ? 'default' : 'pointer',
+                    opacity: p.verifying ? 0.7 : 1,
+                    boxShadow: '0 0 18px rgba(176,67,255,0.5)',
+                  }}
+                >{p.verifying ? '⏳ VERIFYING ON-CHAIN…' : '🎁 OPEN MYSTERY BOX'}</button>
+                <div style={{ color: '#B98CFF', fontSize: '9px', marginTop: '6px', opacity: 0.85 }}>
+                  Verified against your on-chain check-ins (anti-cheat)
                 </div>
-              )}
-            </>
-          )
+                {p.verifyError && (
+                  <div style={{
+                    marginTop: '8px', padding: '7px 9px',
+                    background: 'rgba(180,0,0,0.85)', borderRadius: '8px',
+                    color: '#fff', fontSize: '10px', fontWeight: 600, lineHeight: 1.35,
+                  }}>
+                    ⚠️ {p.verifyError}
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
       </div>
 
@@ -429,7 +454,8 @@ function SkinsTab(p: SkinsProps) {
         {SKINS.map(s => {
           const owned = p.owned.includes(s.id)
           const isEquipped = p.equipped === s.id
-          const isLocked = s.unlock === 'streak25' && !owned
+          const isBoxOnly = s.unlock === 'box'
+          const isLocked = (s.unlock === 'streak25' || isBoxOnly) && !owned
           const canAfford = p.balance >= s.price
           const meetsStreak = s.unlock !== 'streak25' || p.streak >= STREAK_TARGET_DAYS
           const color = RARITY_COLOR[s.rarity]
@@ -447,6 +473,10 @@ function SkinsTab(p: SkinsProps) {
             actionLabel = 'EQUIP'
             actionStyle = { background: '#0052FF', color: '#fff' }
             onClick = () => p.onEquip(s.id)
+          } else if (isBoxOnly) {
+            actionLabel = '🎁 Box only'
+            actionStyle = { background: 'rgba(176,67,255,0.12)', color: '#B98CFF', border: '1px solid rgba(176,67,255,0.35)' }
+            actionDisabled = true
           } else if (s.unlock === 'streak25') {
             if (meetsStreak) {
               actionLabel = '🐉 CLAIM'
@@ -474,7 +504,7 @@ function SkinsTab(p: SkinsProps) {
               borderRadius: '12px',
               padding: '12px 10px',
               textAlign: 'center',
-              opacity: (isLocked && !meetsStreak) || (!owned && !canAfford && s.unlock !== 'streak25') ? 0.65 : 1,
+              opacity: isLocked || (!owned && !canAfford && !isBoxOnly && s.unlock !== 'streak25') ? 0.65 : 1,
               position: 'relative',
             }}>
               {isEquipped && (
@@ -534,8 +564,8 @@ function HowTab() {
       body: <>One tap on <b style={{ color: '#FF8A00' }}>Check In</b> each day keeps your streak alive. Miss a day and it resets to&nbsp;1.</>,
     },
     {
-      n: 2, icon: '🏆', accent: '#FFD700', title: `Reach Day ${STREAK_TARGET_DAYS}`,
-      body: <>A full <b style={{ color: '#FFD700' }}>{STREAK_TARGET_DAYS}-day streak</b> unlocks a real <b style={{ color: '#FFD700' }}>${PRIZE_USD} prize</b> — claim it and we DM you.</>,
+      n: 2, icon: '🎁', accent: '#B043FF', title: `Reach Day ${STREAK_TARGET_DAYS}`,
+      body: <>A full <b style={{ color: '#B98CFF' }}>{STREAK_TARGET_DAYS}-day streak</b> unlocks the <b style={{ color: '#B98CFF' }}>Mystery Box</b> — open it for coins, an exclusive skin, a score boost or a legend badge!</>,
     },
     {
       n: 3, icon: '🪙', accent: '#00D8A0', title: 'Earn coins in runs',

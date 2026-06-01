@@ -10,7 +10,8 @@ type StreakState = {
   lastCheckIn: string
   totalCheckIns: number
   startDate: string
-  prizeClaimedDay25: boolean
+  prizeClaimedDay25: boolean   // = mystery box opened
+  boxRewardId: string | null   // which reward the box gave
   lastHash: string | null
 }
 
@@ -20,6 +21,7 @@ const DEFAULT_STATE: StreakState = {
   totalCheckIns: 0,
   startDate: '',
   prizeClaimedDay25: false,
+  boxRewardId: null,
   lastHash: null,
 }
 
@@ -146,34 +148,35 @@ export function useDailyStreak() {
 
   const resetTx = () => { reset(); processedRef.current = null }
 
-  // Verify the streak ON-CHAIN before allowing the claim, so a faked
-  // localStorage streak can't grab the prize. Runs only on button click.
-  const claimDay25Prize = async () => {
-    if (state.prizeClaimedDay25 || verifying) return
-    if (!address) { setVerifyError('Connect your wallet first.'); return }
+  // Verify the streak ON-CHAIN before letting the player open the box, so a
+  // faked localStorage streak can't grab a reward. Returns true if allowed.
+  // Runs only on the open-box click — never in the game loop.
+  const verifyStreak = async (): Promise<boolean> => {
+    if (verifying) return false
+    if (!address) { setVerifyError('Connect your wallet first.'); return false }
     if (state.streak < STREAK_TARGET_DAYS) {
-      setVerifyError(`Reach a ${STREAK_TARGET_DAYS}-day streak first.`); return
+      setVerifyError(`Reach a ${STREAK_TARGET_DAYS}-day streak first.`); return false
     }
     setVerifying(true)
     setVerifyError(null)
     try {
       const { ok, count } = await countOnChainCheckIns(address)
       setVerifiedCount(ok ? count : null)
-      if (!ok) {
-        // Explorer unreachable / no API key — don't block a legit player;
-        // the team verifies on BaseScan before paying out.
-        updateState(prev => ({ ...prev, prizeClaimedDay25: true }))
-      } else if (count >= STREAK_TARGET_DAYS) {
-        updateState(prev => ({ ...prev, prizeClaimedDay25: true }))
-      } else {
-        setVerifyError(`Only ${count} on-chain check-ins found — ${STREAK_TARGET_DAYS} required. Keep checking in daily!`)
-      }
+      // ok=false → explorer unreachable/no key: don't block a legit player.
+      if (!ok || count >= STREAK_TARGET_DAYS) return true
+      setVerifyError(`Only ${count} on-chain check-ins found — ${STREAK_TARGET_DAYS} required. Keep checking in daily!`)
+      return false
     } catch {
       setVerifyError('Could not verify on-chain right now. Please try again in a moment.')
+      return false
     } finally {
       setVerifying(false)
     }
   }
+
+  // Record that the box was opened + which reward dropped (per wallet).
+  const markBoxOpened = (rewardId: string) =>
+    updateState(prev => ({ ...prev, prizeClaimedDay25: true, boxRewardId: rewardId }))
 
   return {
     streak: state.streak,
@@ -192,7 +195,10 @@ export function useDailyStreak() {
     address,
     checkIn,
     resetTx,
-    claimDay25Prize,
+    verifyStreak,
+    markBoxOpened,
+    boxOpened: state.prizeClaimedDay25,
+    boxRewardId: state.boxRewardId,
     verifying,
     verifyError,
     verifiedCount,
