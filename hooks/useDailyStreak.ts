@@ -23,7 +23,11 @@ const DEFAULT_STATE: StreakState = {
   lastHash: null,
 }
 
-const KEY = 'baserush.streak.v1'
+// v2: keyed per wallet address (v1 was device-wide — switching wallets wrongly
+// shared one streak). Stored as a map of { addressLower: StreakState }.
+const KEY = 'baserush.streak.v2'
+
+type StreakMap = Record<string, StreakState>
 
 // Count the wallet's real daily check-ins on Base (self-transfers, 0 value) by
 // distinct UTC day. Runs ONLY when claiming the prize — never during gameplay.
@@ -67,7 +71,7 @@ function getYesterday() {
 }
 
 export function useDailyStreak() {
-  const [state, setState] = useState<StreakState>(DEFAULT_STATE)
+  const [map, setMap] = useState<StreakMap>({})
   const [loaded, setLoaded] = useState(false)
   const { address } = useConnection()
   const { sendTransaction, data: hash, isPending: isSending, error: txError, reset } = useSendTransaction()
@@ -79,24 +83,34 @@ export function useDailyStreak() {
   const [verifyError, setVerifyError] = useState<string | null>(null)
   const [verifiedCount, setVerifiedCount] = useState<number | null>(null)
 
+  const addrKey = address ? address.toLowerCase() : ''
+  // Active streak = the connected wallet's record (each wallet tracks its own).
+  const state: StreakState = (addrKey && map[addrKey]) ? map[addrKey] : DEFAULT_STATE
+
+  // Update only the connected wallet's streak record
+  const updateState = (updater: (prev: StreakState) => StreakState) => {
+    if (!addrKey) return
+    setMap(prev => ({ ...prev, [addrKey]: updater(prev[addrKey] || DEFAULT_STATE) }))
+  }
+
   useEffect(() => {
     try {
       const s = localStorage.getItem(KEY)
-      if (s) setState({ ...DEFAULT_STATE, ...JSON.parse(s) })
+      if (s) setMap(JSON.parse(s))
     } catch (e) {}
     setLoaded(true)
   }, [])
 
   useEffect(() => {
     if (!loaded) return
-    try { localStorage.setItem(KEY, JSON.stringify(state)) } catch (e) {}
-  }, [state, loaded])
+    try { localStorage.setItem(KEY, JSON.stringify(map)) } catch (e) {}
+  }, [map, loaded])
 
-  // When tx succeeds, update streak (once per hash)
+  // When tx succeeds, update the connected wallet's streak (once per hash)
   useEffect(() => {
     if (isSuccess && hash && processedRef.current !== hash) {
       processedRef.current = hash
-      setState(prev => {
+      updateState(prev => {
         const today = getToday()
         if (prev.lastCheckIn === today) return prev
         const yesterday = getYesterday()
@@ -148,9 +162,9 @@ export function useDailyStreak() {
       if (!ok) {
         // Explorer unreachable / no API key — don't block a legit player;
         // the team verifies on BaseScan before paying out.
-        setState(prev => ({ ...prev, prizeClaimedDay25: true }))
+        updateState(prev => ({ ...prev, prizeClaimedDay25: true }))
       } else if (count >= STREAK_TARGET_DAYS) {
-        setState(prev => ({ ...prev, prizeClaimedDay25: true }))
+        updateState(prev => ({ ...prev, prizeClaimedDay25: true }))
       } else {
         setVerifyError(`Only ${count} on-chain check-ins found — ${STREAK_TARGET_DAYS} required. Keep checking in daily!`)
       }
