@@ -663,21 +663,13 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         this.input.keyboard?.on('keydown-UP', doJump)
         this.input.keyboard?.on('keydown-DOWN', doSlide)
 
-        // Expose to React so the full-screen container can forward touches
+        // Touch + mouse input is driven by the React full-screen container
+        // (page.tsx) as a SINGLE source — it fires on press (no wait-for-finger-
+        // lift lag) and also covers the letterbox. One source avoids the old
+        // double-fire (Phaser pointer + React touch) that turned a single tap
+        // into an accidental double jump.
         ;(window as any).gameJumpInput = doJump
         ;(window as any).gameSlideInput = doSlide
-
-        let sx = 0, sy = 0
-        this.input.on('pointerdown', (p: any) => { sx = p.x; sy = p.y })
-        this.input.on('pointerup', (p: any) => {
-          if (this.isGameOver) return
-          const dx = p.x - sx
-          const dy = p.y - sy
-          const adx = Math.abs(dx)
-          const ady = Math.abs(dy)
-          if (adx < 15 && ady < 15) doJump()
-          else if (ady > adx) { if (dy < 0) doJump(); else doSlide() }
-        })
 
         // 3-2-1 GO! countdown — dim backdrop + big number + glow ring
         const countdownDim = this.add.rectangle(240, 384, 480, 768, 0x000022, 0.55).setDepth(100)
@@ -744,6 +736,11 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
       update: function (this: any, _t: number, delta: number) {
         if (this.isGameOver || this.isCountingDown) return
 
+        // Frame scale vs a 60fps baseline — keeps score gain & the speed ramp
+        // (and therefore the jump-timing difficulty) IDENTICAL on 60 / 90 / 120 /
+        // 144 Hz devices. Clamped so a single stalled frame can't lurch ahead.
+        const fs = Math.min(2, delta / 16.667)
+
         // ── ADAPTIVE QUALITY SAMPLING ───────────────────────────────────────
         // Average FPS over ~1s, then step quality up/down with hysteresis so a
         // slow WebView/phone sheds effects and a fast one keeps them.
@@ -782,7 +779,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         // Reset double jump when landing
         if (this.basey.body.blocked.down) this.jumpCount = 0
 
-        this.score += 0.08 * this.speedMultiplier * this.scoreBoost
+        this.score += 0.08 * this.speedMultiplier * this.scoreBoost * fs
         this.gameTime += delta
         // Distance: pixels travelled / 30 = meters (feels right for the canvas scale)
         this.distance += (this.obstacleSpeed * delta) / (1000 * 30)
@@ -812,7 +809,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
 
         if (this.obstacleSpeed < this.maxSpeed) {
-          this.obstacleSpeed += this.speedIncrease
+          this.obstacleSpeed += this.speedIncrease * fs
           this.speedMultiplier = Math.min(4.0, this.obstacleSpeed / 400)
           const speedStr = this.speedMultiplier.toFixed(1)
           // Only call setText when displayed value actually changes (saves CPU every frame)

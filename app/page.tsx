@@ -183,27 +183,46 @@ export default function Home() {
     ;(window as any).equippedSkinTint = skins.equippedTint
   }, [skins.equippedTint])
 
-  // Full-screen touch handler — forwards taps/swipes to Phaser even in letterbox area
-  const touchRef = useRef<{ x: number; y: number } | null>(null)
-  const onContainerTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0]
-    touchRef.current = { x: t.clientX, y: t.clientY }
+  // ── INPUT — one source for touch + mouse, tuned for snappy, Dino-like
+  // response across phones and refresh rates. The jump fires the moment the
+  // gesture is known: instantly once an up/sideways move rules out a swipe, on
+  // release for a quick tap, or after a tiny safety window for a held press —
+  // so there's no "wait for finger lift" lag. A deliberate downward swipe still
+  // slides WITHOUT a stray hop (a hop would clip a drone), because we never jump
+  // pre-emptively before the gesture direction is known.
+  const gestureRef = useRef<{ x: number; y: number; decided: boolean; down: boolean } | null>(null)
+  const gestureTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fireJump = () => (window as any).gameJumpInput?.()
+  const fireSlide = () => (window as any).gameSlideInput?.()
+  const clearGestureTimer = () => {
+    if (gestureTimer.current) { clearTimeout(gestureTimer.current); gestureTimer.current = null }
   }
-  const onContainerTouchEnd = (e: React.TouchEvent) => {
-    if (!touchRef.current || isGameOver) return
-    const t = e.changedTouches[0]
-    const dx = t.clientX - touchRef.current.x
-    const dy = t.clientY - touchRef.current.y
-    const adx = Math.abs(dx)
-    const ady = Math.abs(dy)
-    if (adx < 18 && ady < 18) {
-      const fn = (window as any).gameJumpInput
-      if (fn) fn()
-    } else if (ady > adx) {
-      if (dy < 0) { const fn = (window as any).gameJumpInput; if (fn) fn() }
-      else { const fn = (window as any).gameSlideInput; if (fn) fn() }
+  const onContainerPointerDown = (e: React.PointerEvent) => {
+    if (isGameOver || isPaused) return
+    gestureRef.current = { x: e.clientX, y: e.clientY, decided: false, down: true }
+    clearGestureTimer()
+    // Held press with no move / no quick release → treat as a tap (jump) fast.
+    gestureTimer.current = setTimeout(() => {
+      const g = gestureRef.current
+      if (g && g.down && !g.decided) { g.decided = true; fireJump() }
+    }, 55)
+  }
+  const onContainerPointerMove = (e: React.PointerEvent) => {
+    const g = gestureRef.current
+    if (!g || !g.down || g.decided) return
+    const dx = e.clientX - g.x
+    const dy = e.clientY - g.y
+    if (dy > 16 && dy > Math.abs(dx)) {            // deliberate downward swipe → slide
+      g.decided = true; clearGestureTimer(); fireSlide()
+    } else if (-dy > 12 || Math.abs(dx) > 16) {    // clearly not a down-swipe → jump now
+      g.decided = true; clearGestureTimer(); fireJump()
     }
-    touchRef.current = null
+  }
+  const onContainerPointerUp = () => {
+    const g = gestureRef.current
+    clearGestureTimer()
+    if (g && g.down && !g.decided) { g.decided = true; fireJump() } // quick tap → jump
+    if (g) g.down = false
   }
 
   const onPlayAgain = () => {
@@ -354,8 +373,10 @@ export default function Home() {
             background: 'radial-gradient(ellipse at 50% 30%, #020E2C 0%, #000810 70%, #000408 100%)',
             overflow: 'hidden'
           }}
-          onTouchStart={onContainerTouchStart}
-          onTouchEnd={onContainerTouchEnd}
+          onPointerDown={onContainerPointerDown}
+          onPointerMove={onContainerPointerMove}
+          onPointerUp={onContainerPointerUp}
+          onPointerCancel={onContainerPointerUp}
         >
           {/* Ambient stars — visible in letterbox areas around the game canvas */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
@@ -396,10 +417,15 @@ export default function Home() {
             pointerEvents: 'none', zIndex: 2,
           }} />
 
-          {/* Phaser mounts here — full area below TopBar, sits above background layer */}
+          {/* Phaser mounts here — full area below TopBar, sits above background layer.
+              touchAction:none stops the browser hijacking gameplay taps/swipes
+              (scroll, pull-to-refresh, double-tap zoom) so input stays instant. */}
           <div
             ref={gameRef}
-            style={{ position: 'absolute', top: 'calc(44px + env(safe-area-inset-top))', left: 0, right: 0, bottom: 0, zIndex: 1 }}
+            style={{
+              position: 'absolute', top: 'calc(44px + env(safe-area-inset-top))', left: 0, right: 0, bottom: 0, zIndex: 1,
+              touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none',
+            }}
           />
 
           {gameLoading && (
