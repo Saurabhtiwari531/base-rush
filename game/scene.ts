@@ -325,7 +325,57 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         createAudio(this)
         createPowerUps(this)
 
-        // Spawn obstacles — track last spawn for coin conflict check
+        // ── COLLECTIBLE LAYOUT — coordinated with each segment's obstacle ───────
+        // Every obstacle lays its coins / power-up where the SAME action that
+        // clears the obstacle also collects them — so there are no "jump for a
+        // coin → crash into an obstacle" no-win spots:
+        //   • ground obstacles (low/high) → collectibles at jump-APEX height, just
+        //     behind the obstacle. One well-timed jump clears the obstacle AND
+        //     sweeps the whole coin row (the player hovers at the apex, so every
+        //     coin lands).
+        //   • drones (you stay grounded / slide under) → collectibles at running
+        //     height → grabbed on the ground without ever jumping into the drone.
+        const APEX_Y = 565   // ~ single-jump apex centre (player hovers here)
+        const RUN_Y = 700    // grounded running height (collected without jumping)
+        this.spawnSegmentCollectibles = (segType: string) => {
+          const grounded = segType === 'drone'
+          const y = grounded ? RUN_Y : APEX_Y
+          const roll = Phaser.Math.FloatBetween(0, 1)
+
+          // ~10% of segments: a single power-up on the same safe path
+          if (roll < 0.10) {
+            const types = ['powerShield', 'powerMagnet', 'powerSlow', 'power2x']
+            const t = Phaser.Math.RND.pick(types)
+            const p = this.powerups.create(560, y, t)
+            if (!p) return
+            p.setDisplaySize(35, 35)
+            p.setDepth(4)
+            p.body.allowGravity = false
+            p.setVelocityX(-this.obstacleSpeed)
+            p.powerType = t
+            this.tweens.add({ targets: p, y: p.y - 12, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+            this.tweens.add({ targets: p, alpha: 0.6, duration: 400, yoyo: true, repeat: -1 })
+            return
+          }
+          // ~10% of segments: empty, for breathing room
+          if (roll < 0.20) return
+
+          // Coin row — kept tight (≤ ~152px) so one well-timed jump sweeps it all.
+          // Starts just behind the obstacle (x 545+) so the clearing jump grabs it.
+          const count = Phaser.Math.Between(3, 5)
+          for (let i = 0; i < count; i++) {
+            const c = this.coins.create(545 + i * 38, y, 'coin')
+            if (!c) continue
+            c.setDisplaySize(28, 28)
+            c.setDepth(4)
+            c.body.allowGravity = false
+            c.setVelocityX(-this.obstacleSpeed)
+            c.baseY = y
+            c.phaseShift = i * 0.9
+          }
+        }
+
+        // Spawn obstacles — each segment also lays down its matched collectibles
         this.lastObstacleY = 0
         this.lastObstacleSpawnTime = 0
         this.time.addEvent({
@@ -334,6 +384,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             if (this.isGameOver || this.isCountingDown) return
             const hasDrones = this.gameTime > 25000
             const roll = Phaser.Math.Between(0, hasDrones ? 4 : 3)
+            let segType = 'low'
             if (hasDrones && roll >= 4) {
               // Flying drone — player must SLIDE under it
               const o = this.obstacles.create(510, 660, 'obsDrone')
@@ -345,6 +396,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
               o.setDepth(4)
               this.lastObstacleY = 660
               this.tweens.add({ targets: o, y: o.y - 10, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+              segType = 'drone'
             } else if (roll <= 1) {
               const o = this.obstacles.create(510, 703, 'obsH')
               o.setDisplaySize(38, 50)
@@ -365,52 +417,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
               this.lastObstacleY = 676
             }
             this.lastObstacleSpawnTime = this.time.now
-          },
-          loop: true
-        })
-
-        // Spawn coins in rows of 3–5 — bobbing driven by update loop (no repeat tweens)
-        this.time.addEvent({
-          delay: 1800,
-          callback: () => {
-            if (this.isGameOver || this.isCountingDown) return
-
-            const nearbyObs = (this.obstacles.getChildren() as any[])
-              .filter((o: any) => o.x > 260 && o.x < 530)
-            const coinY = nearbyObs.length > 0
-              ? Phaser.Math.Between(573, 603)
-              : Phaser.Math.Between(590, 635)
-
-            const count = Phaser.Math.Between(3, 5)
-            for (let i = 0; i < count; i++) {
-              const c = this.coins.create(510 + i * 42, coinY, 'coin')
-              if (!c) continue
-              c.setDisplaySize(28, 28)
-              c.setDepth(4)
-              c.body.allowGravity = false
-              c.setVelocityX(-this.obstacleSpeed)
-              c.baseY = coinY
-              c.phaseShift = i * 0.9
-            }
-          },
-          loop: true
-        })
-
-        // Spawn power-ups
-        this.time.addEvent({
-          delay: 12000,
-          callback: () => {
-            if (this.isGameOver || this.isCountingDown) return
-            const types = ['powerShield', 'powerMagnet', 'powerSlow', 'power2x']
-            const randomType = Phaser.Math.RND.pick(types)
-            const p = this.powerups.create(510, Phaser.Math.Between(578, 648), randomType)
-            p.setDisplaySize(35, 35)
-            p.setDepth(4)
-            p.body.allowGravity = false
-            p.setVelocityX(-this.obstacleSpeed)
-            p.powerType = randomType
-            this.tweens.add({ targets: p, y: p.y - 15, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-            this.tweens.add({ targets: p, alpha: 0.6, duration: 400, yoyo: true, repeat: -1 })
+            // Lay this segment's coins / power-up on the same safe path
+            this.spawnSegmentCollectibles(segType)
           },
           loop: true
         })
