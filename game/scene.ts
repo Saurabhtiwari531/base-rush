@@ -336,10 +336,14 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         //   • drones (you stay grounded / slide under) → collectibles at running
         //     height → grabbed on the ground without ever jumping into the drone.
         const APEX_Y = 565   // ~ single-jump apex centre (player hovers here)
-        const RUN_Y = 700    // grounded running height (collected without jumping)
+        // Drone segments: the player ducks (slide), and the slide hitbox shrinks
+        // to a thin strip at the feet (~y722-729). Coins must sit that low so a
+        // SLIDE collects them — this height is still inside the standing/running
+        // body too, so simply running under the drone grabs them as well.
+        const DUCK_Y = 716
         this.spawnSegmentCollectibles = (segType: string) => {
           const grounded = segType === 'drone'
-          const y = grounded ? RUN_Y : APEX_Y
+          const y = grounded ? DUCK_Y : APEX_Y
           const roll = Phaser.Math.FloatBetween(0, 1)
 
           // ~10% of segments: a single power-up on the same safe path
@@ -371,6 +375,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             c.body.allowGravity = false
             c.setVelocityX(-this.obstacleSpeed)
             c.baseY = y
+            // Low duck-coins bob less so they stay inside the thin slide hitbox
+            c.bobAmp = grounded ? 4 : 7
             c.phaseShift = i * 0.9
           }
         }
@@ -497,7 +503,11 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         // Coin collect — pooled effects, zero per-coin allocation
         const burstColors = [0xFFCC00, 0x0052FF, 0xFFFFFF, 0xFFDD44, 0x1A6EFF]
-        this.physics.add.overlap(this.basey, this.coins, (_b: any, coin: any) => {
+        // Shared collector — used by the running overlap AND the slide-time
+        // proximity sweep (in update), so sliding collects coins exactly like
+        // running does regardless of the shrunken slide hitbox.
+        this.collectCoin = (coin: any) => {
+          if (!coin || !coin.active) return
           const coinX = coin.x
           const coinY = coin.y
           coin.destroy()
@@ -553,10 +563,13 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             targets: t, y: this.basey.y - 70, alpha: 0, duration: 600,
             onComplete: () => t.setVisible(false)
           })
-        })
+        }
+        // Running collection — uses the player's physics body
+        this.physics.add.overlap(this.basey, this.coins, (_b: any, coin: any) => this.collectCoin(coin))
 
-        // Power-up collect
-        this.physics.add.overlap(this.basey, this.powerups, (_b: any, powerup: any) => {
+        // Power-up collect — shared collector (running overlap + slide sweep)
+        this.collectPowerup = (powerup: any) => {
+          if (!powerup || !powerup.active) return
           const type = powerup.powerType
           powerup.destroy()
           this.playCoinSound()
@@ -572,7 +585,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           notif.setText(getPowerUpName(type)).setPosition(240, 100).setAlpha(1).setVisible(true)
           this.tweens.add({ targets: notif, y: 60, alpha: 0, duration: 2000, ease: 'Power2',
             onComplete: () => notif.setVisible(false) })
-        })
+        }
+        this.physics.add.overlap(this.basey, this.powerups, (_b: any, powerup: any) => this.collectPowerup(powerup))
 
         // Jump effect
         // Grab a recycled particle from the shared pool (no per-jump allocation)
@@ -926,8 +940,24 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           const bobT = this.time.now * 0.003
           this.coins.getChildren().forEach((c: any) => {
             if (c.active && c.baseY !== undefined) {
-              c.y = c.baseY + Math.sin(bobT + c.phaseShift) * 7
+              c.y = c.baseY + Math.sin(bobT + c.phaseShift) * (c.bobAmp ?? 7)
             }
+          })
+        }
+
+        // ── SLIDE COLLECTION ────────────────────────────────────────────────
+        // While sliding, the physics body shrinks to a thin foot strip, so the
+        // body-based overlaps miss most coins/power-ups you slide through. Sweep
+        // the player's full column by proximity so a slide collects everything it
+        // passes — identical to running.
+        if (this.isSliding) {
+          const px = this.basey.x
+          const py = this.basey.y
+          this.coins.getChildren().forEach((c: any) => {
+            if (c.active && Math.abs(c.x - px) < 28 && Math.abs(c.y - py) < 36) this.collectCoin(c)
+          })
+          this.powerups.getChildren().forEach((p: any) => {
+            if (p.active && Math.abs(p.x - px) < 30 && Math.abs(p.y - py) < 40) this.collectPowerup(p)
           })
         }
 
