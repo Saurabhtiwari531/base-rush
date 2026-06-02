@@ -43,18 +43,22 @@ type Props = {
   leaderboardLoading: boolean
   onTogglePause?: () => void
   isPaused?: boolean
+  // When true, render only the modals (no bar) — the redesigned start screen
+  // shows its own top bar, but still needs this component's leaderboard modal.
+  hideBar?: boolean
 }
 
 export function TopBar({
   isConnected, address, disconnect,
   showLeaderboard, setShowLeaderboard, refetch,
   leaderboard, leaderboardLoading,
-  onTogglePause, isPaused,
+  onTogglePause, isPaused, hideBar,
 }: Props) {
   const [showHowItWorks, setShowHowItWorks] = useState(false)
 
   return (
     <>
+      {!hideBar && (
       <div className="tb-header" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: 'rgba(0,0,30,0.95)',
@@ -153,6 +157,7 @@ export function TopBar({
           )}
         </div>
       </div>
+      )}
 
       {/* ── HOW IT WORKS MODAL ── */}
       {showHowItWorks && (

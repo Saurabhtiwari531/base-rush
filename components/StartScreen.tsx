@@ -18,409 +18,352 @@ type Props = {
   onOpenDaily: () => void
   onOpenSkins: () => void
   onOpenHowItWorks: () => void
+  onOpenLeaderboard: () => void
 }
 
-const TOTAL_ACHIEVEMENTS = 16
 const STREAK_TARGET = 25
+const HEX = 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
 
-const trayBtn: React.CSSProperties = {
-  background: 'rgba(0,82,255,0.08)',
-  border: '1px solid rgba(0,82,255,0.25)',
-  borderRadius: '10px',
-  padding: '8px 4px',
-  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-  cursor: 'pointer', color: 'inherit',
+// Pointy-top neon hexagon button (icon + caption). The coloured hex sits under a
+// slightly-smaller dark hex to make a glowing ring; drop-shadow follows the clip.
+function HexButton({
+  icon, label, color, onClick, badge,
+}: {
+  icon: React.ReactNode; label: string; color: string; onClick: () => void; badge?: string | number
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="rh-press"
+      style={{
+        background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '60px',
+      }}
+    >
+      <div style={{ position: 'relative', width: '50px', height: '56px', filter: `drop-shadow(0 0 6px ${color}aa)` }}>
+        <div style={{ position: 'absolute', inset: 0, clipPath: HEX, background: color }} />
+        <div style={{ position: 'absolute', inset: '2.5px', clipPath: HEX, background: 'linear-gradient(160deg,#15114e,#0a0726)' }} />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '21px' }}>
+          {icon}
+        </div>
+        {badge != null && (
+          <div style={{
+            position: 'absolute', top: '-3px', right: '0px', minWidth: '17px', height: '17px', padding: '0 4px',
+            borderRadius: '9px', background: '#FF2D55', color: '#fff', fontSize: '10px', fontWeight: 'bold',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 8px rgba(255,45,85,0.9)',
+          }}>{badge}</div>
+        )}
+      </div>
+      <span style={{ color: '#cfe0ff', fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '1px', textShadow: `0 0 6px ${color}55` }}>
+        {label}
+      </span>
+    </button>
+  )
 }
-const trayLabel: React.CSSProperties = {
-  color: '#88AACC', fontSize: '8px', letterSpacing: '1.5px', fontWeight: 'bold',
-  marginTop: '2px',
+
+function StatCard({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) {
+  return (
+    <div style={{
+      flex: 1, background: 'rgba(10,10,40,0.55)', border: `1px solid ${color}55`,
+      borderRadius: '14px', padding: '9px 4px', textAlign: 'center',
+      boxShadow: `0 0 14px ${color}22, inset 0 0 14px ${color}10`,
+    }}>
+      <div style={{ fontSize: '17px', lineHeight: 1, marginBottom: '3px' }}>{icon}</div>
+      <div style={{ color: '#8aa0c8', fontSize: '7.5px', fontWeight: 'bold', letterSpacing: '1.5px' }}>{label}</div>
+      <div style={{ color, fontSize: '16px', fontWeight: 800, textShadow: `0 0 10px ${color}88`, marginTop: '1px' }}>{value}</div>
+    </div>
+  )
 }
-const trayValue: React.CSSProperties = {
-  fontSize: '10px', fontWeight: 'bold', display: 'flex', gap: '2px',
+
+function NavItem({ icon, label, color, active, onClick }: {
+  icon: string; label: string; color: string; active?: boolean; onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer', flex: 1,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '2px 0',
+      }}
+    >
+      <span style={{ fontSize: '17px', opacity: active ? 1 : 0.65, filter: active ? `drop-shadow(0 0 6px ${color})` : 'none' }}>{icon}</span>
+      <span style={{ color: active ? color : '#6a7da0', fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '0.5px' }}>{label}</span>
+    </button>
+  )
 }
 
 export function StartScreen({
   onStart, isConnected, address, onConnect, personalBest,
   achievementsUnlocked, onShowAchievements,
-  streak, hasCheckedInToday, coinBalance, equippedSkin, dailyCoins,
-  onOpenDaily, onOpenSkins, onOpenHowItWorks,
+  streak, hasCheckedInToday, coinBalance, equippedSkin,
+  onOpenDaily, onOpenSkins, onOpenHowItWorks, onOpenLeaderboard,
 }: Props) {
+  const skylineHeights = [40, 72, 54, 96, 62, 116, 78, 50, 88, 60, 46]
+
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      minHeight: '100dvh', width: '100%',
-      // Deeper, bluer Base-navy gradient — matches the in-game background so the
-      // start screen and gameplay feel like one cohesive world.
-      background: 'radial-gradient(ellipse at 50% 0%, #08193f 0%, #030a1e 45%, #00040c 100%)',
-      // Clear the fixed TopBar + device notch; let tall content scroll on small
-      // phones instead of clipping off-screen.
-      padding: '20px',
-      paddingTop: 'calc(56px + env(safe-area-inset-top))',
-      paddingBottom: 'calc(28px + env(safe-area-inset-bottom))',
-      // Use the app's premium display font (was Courier New, which read as cheap)
-      // so the start screen matches the polished look of the rest of the app.
+      position: 'relative', display: 'flex', flexDirection: 'column',
+      minHeight: '100dvh', width: '100%', overflowX: 'hidden', overflowY: 'auto',
       fontFamily: 'var(--ui-font)',
-      position: 'relative', overflowX: 'hidden', overflowY: 'auto',
+      paddingTop: 'calc(10px + env(safe-area-inset-top))',
+      paddingBottom: 'calc(6px + env(safe-area-inset-bottom))',
+      paddingLeft: '12px', paddingRight: '12px',
+      background: 'radial-gradient(ellipse 90% 55% at 50% 40%, #2a1c6e 0%, #120c44 42%, #06031c 100%)',
     }}>
-      {/* Animated stars background */}
-      <div style={{
-        position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none'
-      }}>
-        {[...Array(30)].map((_, i) => (
+      <style>{`
+        @keyframes brLogoGlow {
+          0%,100% { filter: drop-shadow(0 0 14px rgba(40,140,255,0.5)); }
+          50%     { filter: drop-shadow(0 0 26px rgba(255,45,155,0.55)); }
+        }
+        @keyframes brPlayPulse {
+          0%,100% { box-shadow: 0 6px 26px rgba(255,80,140,0.45), 0 0 0 1px rgba(255,200,120,0.4); }
+          50%     { box-shadow: 0 8px 40px rgba(255,120,60,0.85), 0 0 0 1px rgba(255,220,150,0.6); }
+        }
+        @keyframes brChestGlow {
+          0%,100% { box-shadow: 0 0 16px rgba(255,180,40,0.35); }
+          50%     { box-shadow: 0 0 28px rgba(255,180,40,0.65); }
+        }
+      `}</style>
+
+      {/* ── BACKGROUND LAYERS ───────────────────────────────────────────── */}
+      {/* stars */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        {[...Array(26)].map((_, i) => (
           <div key={i} style={{
             position: 'absolute',
-            width: i % 3 === 0 ? '3px' : '2px',
-            height: i % 3 === 0 ? '3px' : '2px',
-            background: i % 4 === 0 ? '#0052FF' : '#ffffff',
-            borderRadius: '50%',
-            top: `${(i * 37 + 5) % 100}%`,
-            left: `${(i * 53 + 7) % 100}%`,
-            opacity: 0.4 + (i % 5) * 0.1,
+            width: i % 4 === 0 ? '2.5px' : '1.5px', height: i % 4 === 0 ? '2.5px' : '1.5px',
+            background: i % 5 === 0 ? '#7fd0ff' : '#ffffff', borderRadius: '50%',
+            top: `${(i * 31 + 5) % 60}%`, left: `${(i * 57 + 7) % 100}%`,
+            opacity: 0.25 + (i % 4) * 0.12,
           }} />
         ))}
       </div>
-
-      {/* PRIZE BANNER */}
+      {/* city skyline */}
       <div style={{
-        background: 'linear-gradient(135deg, #1a0a00 0%, #2a1000 100%)',
-        border: '2px solid #FFD700',
-        borderRadius: '12px',
-        padding: '10px 24px',
-        marginBottom: '20px',
-        display: 'flex', alignItems: 'center', gap: '10px',
-        boxShadow: '0 0 20px rgba(255,215,0,0.3)',
+        position: 'absolute', left: 0, right: 0, top: '40%', height: '130px', zIndex: 0,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '3px',
+        opacity: 0.5, pointerEvents: 'none',
       }}>
-        <span style={{ fontSize: '22px' }}>🏆</span>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#FFD700', fontWeight: 'bold', fontSize: '12px', letterSpacing: '2px' }}>
-            WEEKLY PRIZE POOL
-          </div>
-          <div style={{ color: '#FFA500', fontSize: '11px' }}>
-            🥇 $5 &nbsp;•&nbsp; 🥈 $3 &nbsp;•&nbsp; 🥉 $1
-          </div>
+        {skylineHeights.map((h, i) => (
+          <div key={i} style={{
+            width: '8%', height: `${h}px`,
+            background: 'linear-gradient(180deg, rgba(70,45,150,0.55), rgba(18,10,48,0.15))',
+            borderTop: '2px solid rgba(150,95,255,0.6)',
+            boxShadow: '0 0 10px rgba(120,70,255,0.3)',
+          }} />
+        ))}
+      </div>
+      {/* synthwave perspective grid floor */}
+      <div style={{
+        position: 'absolute', left: '-50%', right: '-50%', bottom: '20%', height: '46%', zIndex: 0,
+        backgroundImage:
+          'linear-gradient(rgba(90,150,255,0.35) 1.5px, transparent 1.5px),' +
+          'linear-gradient(90deg, rgba(190,90,255,0.28) 1.5px, transparent 1.5px)',
+        backgroundSize: '46px 46px',
+        transform: 'perspective(330px) rotateX(66deg)', transformOrigin: 'center bottom',
+        maskImage: 'linear-gradient(to top, #000 8%, transparent 78%)',
+        WebkitMaskImage: 'linear-gradient(to top, #000 8%, transparent 78%)',
+        opacity: 0.75, pointerEvents: 'none',
+      }} />
+
+      {/* ── TOP BAR ─────────────────────────────────────────────────────── */}
+      <div style={{
+        position: 'relative', zIndex: 3,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+      }}>
+        <button onClick={onOpenHowItWorks} className="rh-press" aria-label="How to play" style={{
+          width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
+          background: 'rgba(10,12,46,0.7)', border: '1.5px solid rgba(90,150,255,0.7)',
+          color: '#cfe0ff', fontSize: '18px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 0 12px rgba(60,120,255,0.4)',
+        }}>⚙️</button>
+
+        <div onClick={onOpenSkins} style={{
+          display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
+          background: 'rgba(10,12,46,0.7)', border: '1.5px solid rgba(255,200,60,0.65)',
+          borderRadius: '20px', padding: '4px 6px 4px 10px',
+          boxShadow: '0 0 12px rgba(255,200,60,0.3)',
+        }}>
+          <span style={{ fontSize: '14px' }}>🪙</span>
+          <span style={{ color: '#FFD24A', fontSize: '13px', fontWeight: 800, fontFamily: 'var(--ui-mono)' }}>
+            {coinBalance.toLocaleString()}
+          </span>
+          <span style={{
+            width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(255,200,60,0.2)',
+            border: '1px solid rgba(255,200,60,0.7)', color: '#FFD24A', fontSize: '13px', fontWeight: 'bold',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+          }}>+</span>
         </div>
-        <span style={{ fontSize: '22px' }}>🏆</span>
+
+        <button onClick={() => { if (!isConnected) onConnect() }} className="rh-press" style={{
+          display: 'flex', alignItems: 'center', gap: '5px', cursor: isConnected ? 'default' : 'pointer',
+          background: 'rgba(10,12,46,0.7)',
+          border: `1.5px solid ${isConnected ? 'rgba(0,230,140,0.7)' : 'rgba(90,150,255,0.7)'}`,
+          borderRadius: '20px', padding: '5px 11px',
+          color: isConnected ? '#00E68C' : '#9cc2ff', fontSize: '11px', fontWeight: 'bold',
+          fontFamily: 'var(--ui-mono)', whiteSpace: 'nowrap',
+          boxShadow: `0 0 12px ${isConnected ? 'rgba(0,230,140,0.3)' : 'rgba(60,120,255,0.3)'}`,
+        }}>
+          {isConnected ? `✅ ${address?.slice(0, 4)}…${address?.slice(-3)}` : '🔵 Connect'}
+        </button>
+
+        <button onClick={onOpenDaily} className="rh-press" aria-label="Daily reward" style={{
+          position: 'relative', width: '38px', height: '38px', borderRadius: '12px', flexShrink: 0,
+          background: 'rgba(10,12,46,0.7)', border: '1.5px solid rgba(255,90,200,0.7)',
+          fontSize: '18px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 0 12px rgba(255,90,200,0.4)',
+        }}>
+          🎁
+          {!hasCheckedInToday && (
+            <span style={{
+              position: 'absolute', top: '-4px', right: '-4px', width: '12px', height: '12px',
+              borderRadius: '50%', background: '#FF2D55', boxShadow: '0 0 8px rgba(255,45,85,0.9)',
+            }} />
+          )}
+        </button>
       </div>
 
-      {/* GAME LOGO CARD */}
-      <div style={{
-        background: 'linear-gradient(180deg, rgba(0,10,40,0.95) 0%, rgba(0,5,20,0.98) 100%)',
-        border: '2px solid #0052FF',
-        borderRadius: '20px',
-        padding: '28px 24px',
-        maxWidth: '360px', width: '100%',
-        textAlign: 'center',
-        boxShadow: '0 0 40px rgba(0,82,255,0.25), inset 0 1px 0 rgba(0,82,255,0.2)',
-        position: 'relative',
-      }}>
-        {/* PLAY TO EARN badge */}
+      {/* ── LOGO ────────────────────────────────────────────────────────── */}
+      <div style={{ textAlign: 'center', lineHeight: 0.84, marginTop: '14px', zIndex: 2, animation: 'brLogoGlow 3.2s ease-in-out infinite' }}>
         <div style={{
-          position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)',
-          background: 'linear-gradient(135deg, #00C853 0%, #00E676 100%)',
-          color: '#000000', fontWeight: 'bold', fontSize: '10px',
-          padding: '4px 16px', borderRadius: '20px', letterSpacing: '2px',
-          whiteSpace: 'nowrap',
+          fontSize: 'clamp(46px, 15vw, 62px)', fontWeight: 900, fontStyle: 'italic', letterSpacing: '2px',
+          background: 'linear-gradient(180deg,#9fe4ff 0%,#1f86ff 100%)',
+          WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+          textShadow: '0 0 22px rgba(40,150,255,0.45)',
+        }}>BASE</div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '-4px' }}>
+          <span style={{
+            fontSize: 'clamp(46px, 15vw, 62px)', fontWeight: 900, fontStyle: 'italic', letterSpacing: '2px',
+            background: 'linear-gradient(180deg,#ff9ee0 0%,#ff2d9b 100%)',
+            WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+            textShadow: '0 0 22px rgba(255,45,155,0.45)',
+          }}>RUSH</span>
+          <span style={{ fontSize: 'clamp(34px, 11vw, 46px)', filter: 'drop-shadow(0 0 10px rgba(255,200,40,0.8))' }}>⚡</span>
+        </div>
+      </div>
+
+      {/* tagline */}
+      <div style={{ textAlign: 'center', marginTop: '8px', zIndex: 2, fontSize: '12px', fontWeight: 800, letterSpacing: '1px' }}>
+        <span style={{ color: '#22d3ff' }}>RUN. </span>
+        <span style={{ color: '#ff4fb0' }}>JUMP. </span>
+        <span style={{ color: '#ffcf3a' }}>RUSH. </span>
+        <span style={{ color: '#eaf2ff' }}>REPEAT.</span>
+      </div>
+
+      {/* ── HERO: side hex menus + robot on the road ────────────────────── */}
+      <div style={{ position: 'relative', zIndex: 2, flex: '0 0 auto', minHeight: '236px', marginTop: '6px' }}>
+        {/* left menu */}
+        <div style={{
+          position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
+          display: 'flex', flexDirection: 'column', gap: '12px',
         }}>
-          ⚡ PLAY TO EARN
+          <HexButton icon={equippedSkin?.icon || '🤖'} label="SKINS" color="#2f7bff" onClick={onOpenSkins} />
+          <HexButton icon="⚡" label="POWER-UPS" color="#ffb330" onClick={onOpenHowItWorks} />
+          <HexButton icon="🏆" label="LEADERBOARD" color="#ffd24a" onClick={onOpenLeaderboard} />
         </div>
 
-        {/* Game character — actual BASEY robot from game */}
-        <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 4px' }}>
+        {/* right menu */}
+        <div style={{
+          position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+          display: 'flex', flexDirection: 'column', gap: '12px',
+        }}>
+          <HexButton icon="🎯" label="BADGES" color="#ff5ac8" onClick={onShowAchievements}
+            badge={achievementsUnlocked > 0 ? achievementsUnlocked : undefined} />
+          <HexButton icon="📅" label="DAILY" color="#9b5cff" onClick={onOpenDaily}
+            badge={hasCheckedInToday ? undefined : '!'} />
+          <HexButton icon="📖" label="HOW TO PLAY" color="#22c3ff" onClick={onOpenHowItWorks} />
+        </div>
+
+        {/* robot mascot on a glowing pad */}
+        <div style={{
+          position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%) scale(1.55)',
+          transformOrigin: 'center',
+        }}>
           <BaseyCanvas />
         </div>
-
-        {/* Title */}
-        <h1 style={{
-          color: '#FFFFFF', fontSize: '36px', fontWeight: 'bold',
-          margin: '8px 0 4px', letterSpacing: '6px',
-          textShadow: '0 0 20px rgba(0,82,255,0.8), 0 0 40px rgba(0,82,255,0.4)',
-        }}>
-          BASE RUSH
-        </h1>
-        <p style={{
-          color: '#0088FF', fontSize: '11px', letterSpacing: '3px',
-          margin: '0 0 20px',
-        }}>
-          ON-CHAIN RUNNER · BASE NETWORK
-        </p>
-
-        {/* Stats row */}
+        {/* floor glow under robot */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-          gap: '8px', marginBottom: '20px',
-        }}>
-          {[
-            { icon: '🪙', label: 'Coins', val: 'Collect' },
-            { icon: '🛡️', label: 'Power-ups', val: '4 Types' },
-            { icon: '⛓️', label: 'On-chain', val: 'Scores' },
-          ].map(s => (
-            <div key={s.label} style={{
-              background: 'rgba(0,82,255,0.1)',
-              border: '1px solid rgba(0,82,255,0.3)',
-              borderRadius: '10px', padding: '10px 6px',
-            }}>
-              <div style={{ fontSize: '20px' }}>{s.icon}</div>
-              <div style={{ color: '#00AAFF', fontSize: '10px', fontWeight: 'bold', marginTop: '4px' }}>
-                {s.val}
-              </div>
-              <div style={{ color: '#556677', fontSize: '9px' }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
+          position: 'absolute', left: '50%', bottom: '14px', transform: 'translateX(-50%)',
+          width: '150px', height: '24px', borderRadius: '50%',
+          background: 'radial-gradient(ellipse, rgba(60,150,255,0.5), transparent 70%)', filter: 'blur(3px)',
+        }} />
+      </div>
 
-        {/* Controls */}
-        <div style={{
-          background: 'rgba(0,0,0,0.4)',
-          border: '1px solid rgba(0,82,255,0.2)',
-          borderRadius: '10px', padding: '12px',
-          marginBottom: '20px', textAlign: 'left',
-        }}>
-          <div style={{ color: '#0088FF', fontSize: '10px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>
-            HOW TO PLAY
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-            {[
-              { key: 'SPACE / ↑ / Tap', action: 'Jump' },
-              { key: 'DOWN / Swipe ↓', action: 'Slide' },
-              { key: '🔥 Combo', action: 'Chain coins' },
-              { key: '🎁 Drops', action: 'Power-ups' },
-            ].map(c => (
-              <div key={c.action} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{
-                  background: 'rgba(0,82,255,0.2)', color: '#AACCFF',
-                  fontSize: '9px', padding: '2px 5px', borderRadius: '4px',
-                  border: '1px solid rgba(0,82,255,0.3)', whiteSpace: 'nowrap',
-                }}>
-                  {c.key}
-                </span>
-                <span style={{ color: '#667788', fontSize: '9px' }}>{c.action}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* ── PLAY ────────────────────────────────────────────────────────── */}
+      <button
+        onClick={onStart}
+        className="rh-press"
+        style={{
+          position: 'relative', zIndex: 2, alignSelf: 'center', width: '100%', maxWidth: '380px',
+          marginTop: '10px',
+          background: 'linear-gradient(95deg, #ff7a2f 0%, #ff3d8b 60%, #ff2d9b 100%)',
+          border: '1px solid rgba(255,210,150,0.5)', color: '#fff',
+          padding: '16px 28px', borderRadius: '16px',
+          fontSize: '24px', fontWeight: 900, letterSpacing: '4px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+          animation: 'brPlayPulse 2.4s ease-in-out infinite',
+        }}
+      >
+        PLAY <span style={{ fontSize: '20px' }}>▶</span>
+      </button>
 
-        {/* Personal Best */}
-        {personalBest > 0 && (
+      {/* ── STAT CARDS ──────────────────────────────────────────────────── */}
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: '8px', marginTop: '12px', maxWidth: '420px', width: '100%', alignSelf: 'center' }}>
+        <StatCard icon="🪙" label="COINS" value={coinBalance.toLocaleString()} color="#FFD24A" />
+        <StatCard icon="🏆" label="BEST SCORE" value={personalBest > 0 ? personalBest.toLocaleString() : '—'} color="#22c3ff" />
+        <StatCard icon="🔥" label="DAILY STREAK" value={`${streak}`} color="#ff8a3d" />
+      </div>
+
+      {/* ── REWARD CHEST BANNER ─────────────────────────────────────────── */}
+      <button
+        onClick={onOpenDaily}
+        style={{
+          position: 'relative', zIndex: 2, marginTop: '12px', width: '100%', maxWidth: '420px', alignSelf: 'center',
+          display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', textAlign: 'left',
+          background: hasCheckedInToday
+            ? 'linear-gradient(95deg, rgba(40,30,90,0.7), rgba(20,16,52,0.7))'
+            : 'linear-gradient(95deg, rgba(80,40,10,0.85), rgba(60,20,70,0.85))',
+          border: `1.5px solid ${hasCheckedInToday ? 'rgba(120,100,200,0.5)' : 'rgba(255,180,40,0.8)'}`,
+          borderRadius: '14px', padding: '10px 12px',
+          animation: hasCheckedInToday ? 'none' : 'brChestGlow 2s ease-in-out infinite',
+        }}
+      >
+        <span style={{ fontSize: '30px', flexShrink: 0, filter: 'drop-shadow(0 0 8px rgba(255,190,60,0.7))' }}>
+          {hasCheckedInToday ? '✅' : '🎁'}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '8px', marginBottom: '10px',
-            background: 'rgba(255,215,0,0.08)',
-            border: '1px solid rgba(255,215,0,0.3)',
-            borderRadius: '10px', padding: '8px 16px',
+            color: hasCheckedInToday ? '#b7c4e6' : '#ffd24a', fontSize: '13px', fontWeight: 900, letterSpacing: '0.5px',
           }}>
-            <span style={{ fontSize: '16px' }}>🏆</span>
-            <span style={{ color: '#AAAAAA', fontSize: '11px', letterSpacing: '1px' }}>YOUR BEST</span>
-            <span style={{ color: '#FFD700', fontSize: '18px', fontWeight: 'bold' }}>
-              {personalBest.toLocaleString()}
-            </span>
-            <span style={{ color: '#AAAAAA', fontSize: '10px' }}>pts</span>
+            {hasCheckedInToday ? 'CLAIMED TODAY ✓' : 'CLAIM YOUR REWARD!'}
           </div>
+          <div style={{ color: hasCheckedInToday ? '#7e8cb5' : '#ffe7a8', fontSize: '11px', fontWeight: 700 }}>
+            {hasCheckedInToday
+              ? `🔥 ${streak}-day streak · ${Math.min(streak, STREAK_TARGET)}/${STREAK_TARGET} to box`
+              : 'FREE daily chest + coins'}
+          </div>
+        </div>
+        {!hasCheckedInToday && (
+          <span style={{
+            flexShrink: 0, background: 'linear-gradient(180deg,#ffd24a,#ff9e1b)', color: '#3a1d00',
+            fontSize: '13px', fontWeight: 900, letterSpacing: '1px', padding: '8px 16px', borderRadius: '10px',
+            boxShadow: '0 0 14px rgba(255,180,40,0.5)',
+          }}>CLAIM</span>
         )}
+      </button>
 
-        {/* DAILY STREAK CTA — hero spot */}
-        <button
-          onClick={onOpenDaily}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '12px',
-            width: '100%', marginBottom: '10px',
-            background: hasCheckedInToday
-              ? 'linear-gradient(135deg, rgba(0,200,80,0.18), rgba(0,200,80,0.04))'
-              : streak > 0
-                ? 'linear-gradient(135deg, rgba(255,140,0,0.22), rgba(255,80,0,0.05))'
-                : 'linear-gradient(135deg, rgba(255,140,0,0.15), rgba(255,80,0,0.03))',
-            border: hasCheckedInToday
-              ? '1px solid rgba(0,200,80,0.5)'
-              : '1px solid rgba(255,140,0,0.5)',
-            borderRadius: '12px', padding: '10px 14px',
-            cursor: 'pointer', color: 'inherit', textAlign: 'left',
-            position: 'relative', overflow: 'hidden',
-          }}
-        >
-          <div style={{ fontSize: '24px', flexShrink: 0 }}>
-            {hasCheckedInToday ? '✅' : '🔥'}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
-              color: hasCheckedInToday ? '#00C853' : '#FFAA00',
-              marginBottom: '2px',
-            }}>
-              {hasCheckedInToday
-                ? 'STREAK ACTIVE TODAY'
-                : streak > 0
-                  ? "DON'T LOSE YOUR STREAK!"
-                  : 'START DAILY STREAK'}
-            </div>
-            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 'bold', lineHeight: 1.1 }}>
-              {streak > 0
-                ? `🔥 ${streak}-day streak · ${Math.min(streak, STREAK_TARGET)}/${STREAK_TARGET}`
-                : '🎁 Reach Day 25 → Mystery Box'}
-            </div>
-
-            {/* Progress bar toward the Day-25 Mystery Box */}
-            {streak > 0 && (
-              <div style={{
-                width: '100%', height: '4px', marginTop: '5px',
-                background: 'rgba(255,255,255,0.12)', borderRadius: '2px', overflow: 'hidden',
-              }}>
-                <div style={{
-                  width: `${Math.min(100, (streak / STREAK_TARGET) * 100)}%`, height: '100%',
-                  background: 'linear-gradient(90deg, #FF8A00, #FFD700)',
-                }} />
-              </div>
-            )}
-
-            <div style={{
-              color: hasCheckedInToday ? '#88BB99' : '#FFC980',
-              fontSize: '9px', marginTop: streak > 0 ? '4px' : '3px',
-            }}>
-              {hasCheckedInToday
-                ? '✓ Come back tomorrow to keep it alive'
-                : streak > 0
-                  ? `Check in today → +${dailyCoins} 🪙`
-                  : `+${dailyCoins} 🪙 every day · 🎁 box at Day 25`}
-            </div>
-          </div>
-          <span style={{ color: '#fff', fontSize: '16px', alignSelf: 'center' }}>›</span>
-        </button>
-
-        {/* 3-column tray: Achievements · Skins · Best */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-          gap: '6px', marginBottom: '12px',
-        }}>
-          <button onClick={onShowAchievements} style={trayBtn}>
-            <div style={{ fontSize: '18px', lineHeight: 1 }}>🏅</div>
-            <div style={trayLabel}>BADGES</div>
-            <div style={trayValue}>
-              <span style={{ color: '#FFD700' }}>{achievementsUnlocked}</span>
-              <span style={{ color: '#556677' }}>/{TOTAL_ACHIEVEMENTS}</span>
-            </div>
-          </button>
-          <button onClick={onOpenSkins} style={trayBtn}>
-            <div style={{ fontSize: '18px', lineHeight: 1 }}>{equippedSkin.icon}</div>
-            <div style={trayLabel}>SKINS</div>
-            <div style={trayValue}>
-              <span style={{ color: '#FFD700' }}>🪙{coinBalance.toLocaleString()}</span>
-            </div>
-          </button>
-          {personalBest > 0 ? (
-            <div style={{ ...trayBtn, cursor: 'default' } as React.CSSProperties}>
-              <div style={{ fontSize: '18px', lineHeight: 1 }}>🏆</div>
-              <div style={trayLabel}>BEST</div>
-              <div style={trayValue}>
-                <span style={{ color: '#FFD700' }}>{personalBest.toLocaleString()}</span>
-              </div>
-            </div>
-          ) : (
-            <button onClick={onOpenHowItWorks} style={trayBtn}>
-              <div style={{ fontSize: '18px', lineHeight: 1 }}>📖</div>
-              <div style={trayLabel}>HOW</div>
-              <div style={trayValue}>
-                <span style={{ color: '#88BBFF' }}>Learn</span>
-              </div>
-            </button>
-          )}
-        </div>
-
-        {/* PLAY button */}
-        <button
-          onClick={onStart}
-          className="rh-press"
-          style={{
-            background: 'linear-gradient(135deg, #0052FF 0%, #0088FF 100%)',
-            border: 'none', color: '#FFFFFF',
-            padding: '18px 40px', borderRadius: '14px',
-            cursor: 'pointer', fontSize: '20px', fontWeight: 'bold',
-            width: '100%',
-            boxShadow: '0 4px 24px rgba(0,82,255,0.5), 0 0 0 1px rgba(0,136,255,0.3)',
-            letterSpacing: '3px',
-            transition: 'transform 0.1s',
-            // Gentle "breathing" glow so the primary CTA feels alive / premium
-            animation: 'ctaPulse 2.4s ease-in-out infinite',
-          }}
-          onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.97)')}
-          onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
-        >
-          ▶ PLAY NOW
-        </button>
-
-        {/* Wallet status */}
-        <div style={{ marginTop: '14px' }}>
-          {isConnected ? (
-            <div style={{
-              background: 'rgba(0,200,80,0.1)', border: '1px solid rgba(0,200,80,0.3)',
-              borderRadius: '8px', padding: '8px 12px',
-              color: '#00C853', fontSize: '11px', fontWeight: 'bold',
-            }}>
-              ✅ {address?.slice(0, 6)}...{address?.slice(-4)} · Ready to earn!
-            </div>
-          ) : (
-            <button
-              onClick={() => onConnect()}
-              style={{
-                background: 'transparent',
-                border: '1px solid rgba(0,82,255,0.5)',
-                color: '#4488FF', fontSize: '11px',
-                padding: '8px 16px', borderRadius: '8px',
-                cursor: 'pointer', width: '100%',
-              }}
-            >
-              🔵 Connect Wallet to Save Score
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Animated scrolling ticker */}
+      {/* ── BOTTOM NAV ──────────────────────────────────────────────────── */}
       <div style={{
-        marginTop: '18px', width: '100%', maxWidth: '360px',
-        overflow: 'hidden', position: 'relative',
+        position: 'relative', zIndex: 2, marginTop: 'auto', paddingTop: '10px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+        borderTop: '1px solid rgba(90,120,220,0.25)',
       }}>
-        <style>{`
-          @keyframes ticker {
-            0%   { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-          @keyframes ctaPulse {
-            0%, 100% { box-shadow: 0 4px 22px rgba(0,82,255,0.45), 0 0 0 1px rgba(0,136,255,0.30); }
-            50%      { box-shadow: 0 6px 34px rgba(0,130,255,0.80), 0 0 0 1px rgba(0,160,255,0.55); }
-          }
-        `}</style>
-        <div style={{
-          display: 'flex', whiteSpace: 'nowrap',
-          animation: 'ticker 14s linear infinite',
-          gap: '0px',
-        }}>
-          {/* Duplicate for seamless loop */}
-          {[0, 1].map(i => (
-            <span key={i} style={{ display: 'inline-flex', gap: '0' }}>
-              {[
-                '⚡ BASE RUSH',
-                '🏆 WEEKLY PRIZES',
-                '⛓️ ON-CHAIN SCORES',
-                '🛡️ POWER-UPS',
-                '🪙 COLLECT COINS',
-                '🚀 PLAY TO EARN',
-              ].map(item => (
-                <span key={item} style={{
-                  color: '#1a3366', fontSize: '10px', letterSpacing: '2px',
-                  padding: '0 20px', fontWeight: 'bold',
-                }}>
-                  {item}  ·
-                </span>
-              ))}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Base branding */}
-      <div style={{
-        marginTop: '10px', color: '#1a2a3a', fontSize: '9px', letterSpacing: '1px',
-      }}>
-        Powered by Base Network · Scores stored on-chain
+        <NavItem icon="🤖" label="HOME" color="#2f9bff" active onClick={() => {}} />
+        <NavItem icon="🏃" label="PLAY" color="#ff4fb0" onClick={onStart} />
+        <NavItem icon="🎁" label="REWARDS" color="#ffd24a" onClick={onOpenDaily} />
+        <NavItem icon="🏆" label="RANKS" color="#22c3ff" onClick={onOpenLeaderboard} />
       </div>
     </div>
   )

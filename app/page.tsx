@@ -345,6 +345,7 @@ export default function Home() {
         leaderboardLoading={leaderboardLoading}
         onTogglePause={gameStarted && !isGameOver && !gameLoading ? togglePause : undefined}
         isPaused={isPaused}
+        hideBar={!gameStarted}
       />
 
       {!gameStarted ? (
@@ -364,6 +365,7 @@ export default function Home() {
           onOpenDaily={() => { setRewardsInitialTab('daily'); setShowRewards(true) }}
           onOpenSkins={() => { setRewardsInitialTab('skins'); setShowRewards(true) }}
           onOpenHowItWorks={() => { setRewardsInitialTab('how'); setShowRewards(true) }}
+          onOpenLeaderboard={() => { setShowLeaderboard(true); refetch() }}
         />
       ) : (
         <div
