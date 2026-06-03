@@ -77,6 +77,19 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         // ── BACKGROUND ──────────────────────────────────────────────────────
         this.add.image(240, 384, 'bg').setDepth(0)
+
+        // ── PARALLAX SKYLINE — far layer scrolls slowest (deepest), near a bit
+        // faster, the floor grid fastest → layered 3D depth illusion.
+        this.skyFar = this.add.tileSprite(240, 354, 480, 120, 'skyFar').setDepth(0.4).setAlpha(0.85)
+        this.skyNear = this.add.tileSprite(240, 329, 480, 170, 'skyNear').setDepth(0.45)
+        // Faint mist drifting just above the dark void (horizon), very slow
+        if (!isMobile || this.quality !== 'low') {
+          this.mist = this.add.tileSprite(240, 420, 480, 64, 'mist').setDepth(0.5).setAlpha(0.7)
+        }
+        // Distance-zone colour wash (fades in at milestones) — one fullscreen rect
+        this.zoneOverlay = this.add.rectangle(240, 384, 480, 768, 0xff6a00, 0).setDepth(0.72)
+        this.lastZone = 0
+
         // Speed-based theme overlays (fade in at 1.2 / 1.5 / 2.0 / 3.0 / 3.5).
         // Start hidden — an alpha-0 fullscreen rect STILL draws on the GPU, so 5
         // of them = 5× wasted fullscreen overdraw every frame. We only flip the
@@ -209,6 +222,23 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           })
         }
         if (!isMobile) schedulePulse()
+
+        // ── SHOOTING STARS — occasional comet streak across the night sky ──────
+        const spawnShootingStar = () => {
+          if (this.isGameOver || this.quality === 'low') return
+          const sy = Phaser.Math.Between(40, 230)
+          const star = this.add.circle(500, sy, 2.5, 0xCFEFFF, 1).setDepth(0.62)
+          const trail = this.add.rectangle(500, sy, 30, 1.5, 0x88CCFF, 0.5).setDepth(0.61)
+          this.tweens.add({
+            targets: [star, trail], x: -40, y: sy + 60, duration: 900, ease: 'Sine.easeIn',
+            onComplete: () => { star.destroy(); trail.destroy() }
+          })
+        }
+        const scheduleStar = () => {
+          if (this.isGameOver) return
+          this.time.delayedCall(Phaser.Math.Between(4000, 9000), () => { spawnShootingStar(); scheduleStar() })
+        }
+        scheduleStar()
 
         // ── HUD FRAME ───────────────────────────────────────────────────────
         // Subtle premium top bar so the HUD reads as a clean band (matches the
@@ -462,6 +492,11 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.lives -= 1
           this.combo = 0
           this.comboText.setVisible(false)
+          // Reset combo-reactive skyline glow
+          if (this.skyNear) {
+            this.skyNear.clearTint()
+            if (this.comboPulse) { this.comboPulse.stop(); this.comboPulse = null; this.skyNear.setAlpha(1) }
+          }
           this.cameras.main.shake(200, 0.015)
           this.basey.setTint(0xFF3333)
           this.playHitSound()
@@ -534,6 +569,17 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             this.comboText.setText(`🔥 COMBO x${this.combo}`)
             this.comboText.setVisible(true)
             if (this.combo >= 5) this.comboText.setColor('#FF00FF')
+          }
+
+          // Combo-reactive skyline: high combo warms the neon lights (red/orange)
+          if (this.skyNear) {
+            const warm = Math.max(0, Math.min(1, (this.combo - 5) / 9))  // 0 at <5 → 1 at 14+
+            const g = Math.round(255 - warm * 90)
+            const b = Math.round(255 - warm * 170)
+            this.skyNear.setTint((255 << 16) | (g << 8) | b)
+            if (this.combo === 10 && !this.comboPulse) {
+              this.comboPulse = this.tweens.add({ targets: this.skyNear, alpha: 0.7, duration: 350, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+            }
           }
 
           this.playCoinSound()
@@ -794,6 +840,16 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         if (distInt !== this.lastDistDisplay) {
           this.lastDistDisplay = distInt
           this.distanceText.setText(distInt + ' m')
+          // ── ZONE TRANSITIONS — colour washes fade in at distance milestones ──
+          const zone = distInt >= 4000 ? 4 : distInt >= 3000 ? 3 : distInt >= 2000 ? 2 : distInt >= 1000 ? 1 : 0
+          if (zone !== this.lastZone && this.zoneOverlay) {
+            this.lastZone = zone
+            // 0 none · 1 sunset · 2 matrix green · 3 crimson · 4 deep violet
+            const zc = [0x000000, 0xff6a00, 0x00ff66, 0xff0033, 0x7a1fff][zone]
+            const za = [0, 0.13, 0.12, 0.13, 0.15][zone]
+            this.zoneOverlay.setFillStyle(zc)
+            this.tweens.add({ targets: this.zoneOverlay, alpha: za, duration: 2500, ease: 'Sine.easeInOut' })
+          }
         }
         // Only call setText when the integer value actually changes (saves CPU every frame)
         const scoreInt = Math.floor(this.score)
@@ -884,6 +940,11 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         if (this.groundGrid) this.groundGrid.tilePositionX += this.obstacleSpeed / 60
         // Scroll far parallax circuit layer (8× slower = depth effect)
         if (this.bgCircuit) this.bgCircuit.tilePositionX += this.obstacleSpeed / (60 * 8)
+
+        // Parallax skyline — near faster than far → depth (both far slower than floor)
+        if (this.skyNear) this.skyNear.tilePositionX += this.obstacleSpeed / 150
+        if (this.skyFar) this.skyFar.tilePositionX += this.obstacleSpeed / 320
+        if (this.mist) this.mist.tilePositionX += this.obstacleSpeed / 240
 
         // Fog: drift left slowly, rise slightly, reset when out of view
         this.fogPool?.forEach((fog: any) => {

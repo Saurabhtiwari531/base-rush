@@ -22,25 +22,8 @@ export function createTextures(scene: any) {
     bg.fillCircle(rnd(0, 480), rnd(4, 350), rnd(0.4, 1.3))
   }
 
-  // ── CITY SKYLINE (side view) — tall towers on the edges, short in the centre
-  // so the play area below stays dark and the running character reads clearly.
-  const neon = [0x3a7bff, 0xff3d9a, 0x22d3ff, 0xb44dff]
+  // Horizon haze where the (scrolling) skyline meets the dark play area
   const horizon = 414
-  let bx = -6
-  while (bx < 486) {
-    const w = irnd(14, 38)
-    const edge = Math.min(1, Math.abs(bx + w / 2 - 240) / 210)   // 0 centre → 1 edges
-    const h = rnd(0.5, 1) * (46 + edge * edge * 250)
-    const topY = horizon - h
-    bg.fillStyle(0x090a26, 0.95); bg.fillRect(bx, topY, w, h)          // dark body
-    bg.fillStyle(neon[irnd(0, 3)], 0.55); bg.fillRect(bx, topY, w, 2)  // neon top edge
-    const wc = neon[irnd(0, 3)]                                        // window colour
-    for (let wy = topY + 6; wy < horizon - 4; wy += 8)
-      for (let wx = bx + 3; wx < bx + w - 3; wx += 6)
-        if (Math.random() < 0.45) { bg.fillStyle(wc, rnd(0.25, 0.65)); bg.fillRect(wx, wy, 2, 3) }
-    bx += w + irnd(1, 7)
-  }
-  // Horizon haze where the skyline meets the dark play area
   bg.fillStyle(0x6a3acc, 0.10); bg.fillRect(0, horizon - 6, 480, 12)
   bg.fillStyle(0x2a1a6a, 0.16); bg.fillRect(0, horizon, 480, 44)
 
@@ -52,6 +35,39 @@ export function createTextures(scene: any) {
 
   bg.generateTexture('bg', 480, 768)
   bg.destroy()
+
+  // ── PARALLAX SKYLINE LAYERS (tileable, scroll horizontally) ─────────────────
+  const neon = [0x3a7bff, 0xff3d9a, 0x22d3ff, 0xb44dff]
+  // NEAR skyline — taller, brighter (scrolls a bit faster)
+  const sn = scene.make.graphics({ x: 0, y: 0, add: false })
+  for (let x = 8; x < 236; ) {
+    const w = irnd(16, 34), h = rnd(60, 165), ty = 170 - h
+    sn.fillStyle(0x0b0c2e, 1); sn.fillRect(x, ty, w, h)
+    sn.fillStyle(neon[irnd(0, 3)], 0.7); sn.fillRect(x, ty, w, 2)
+    const wc = neon[irnd(0, 3)]
+    for (let wy = ty + 6; wy < 168; wy += 8)
+      for (let wx = x + 3; wx < x + w - 3; wx += 6)
+        if (Math.random() < 0.5) { sn.fillStyle(wc, rnd(0.3, 0.7)); sn.fillRect(wx, wy, 2, 3) }
+    x += w + irnd(6, 16)
+  }
+  sn.generateTexture('skyNear', 260, 170); sn.destroy()
+  // FAR skyline — smaller, fainter (scrolls slowest = deepest)
+  const sf = scene.make.graphics({ x: 0, y: 0, add: false })
+  for (let x = 6; x < 200; ) {
+    const w = irnd(12, 26), h = rnd(35, 110), ty = 120 - h
+    sf.fillStyle(0x0a0a24, 0.85); sf.fillRect(x, ty, w, h)
+    sf.fillStyle(neon[irnd(0, 3)], 0.3); sf.fillRect(x, ty, w, 1.5)
+    const wc = neon[irnd(0, 3)]
+    for (let wy = ty + 5; wy < 118; wy += 9)
+      for (let wx = x + 2; wx < x + w - 2; wx += 6)
+        if (Math.random() < 0.3) { sf.fillStyle(wc, rnd(0.12, 0.3)); sf.fillRect(wx, wy, 1.5, 2) }
+    x += w + irnd(5, 14)
+  }
+  sf.generateTexture('skyFar', 220, 120); sf.destroy()
+  // MIST — faint puffs, sits just above the dark void at the horizon
+  const ms = scene.make.graphics({ x: 0, y: 0, add: false })
+  for (let i = 0; i < 8; i++) { ms.fillStyle(0x5a4a9a, 0.045); ms.fillCircle(rnd(10, 246), rnd(26, 42), rnd(26, 46)) }
+  ms.generateTexture('mist', 256, 64); ms.destroy()
 
   // ── PHYSICS GROUND (minimal — visual floor is handled by groundGrid tileSprite) ──
   const gfx = scene.make.graphics({ x: 0, y: 0, add: false })
