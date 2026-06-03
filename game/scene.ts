@@ -210,10 +210,16 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
         if (!isMobile) schedulePulse()
 
-        // HUD: distance counter (center top) — replaces decorative title for live info
+        // ── HUD FRAME ───────────────────────────────────────────────────────
+        // Subtle premium top bar so the HUD reads as a clean band (matches the
+        // start screen's framed, glowing look). Cheap: 2 static shapes.
+        this.add.rectangle(240, 28, 480, 56, 0x0c0626, 0.55).setDepth(9)
+        this.add.rectangle(240, 56, 480, 1.5, 0x7a4dff, 0.55).setDepth(9)
+
+        // HUD: distance counter (center top)
         this.distanceText = this.add.text(240, 22, '0 m', {
-          fontSize: '15px', color: '#00FFAA', fontStyle: 'bold', letterSpacing: 3,
-          stroke: '#001133', strokeThickness: 4,
+          fontSize: '15px', color: '#22D3FF', fontStyle: 'bold', letterSpacing: 3,
+          stroke: '#0a0a2e', strokeThickness: 4,
         }).setOrigin(0.5, 0).setDepth(10)
         this.lastDistDisplay = 0
 
@@ -238,7 +244,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         // Permanent score boost earned from rewards (1.0 = none, 1.1 = +10%)
         this.scoreBoost = (window as any).__brScoreBoost || 1
         this.scoreText = this.add.text(14, 40, 'SCORE  0', {
-          fontSize: '13px', color: '#FFFFFF', fontStyle: 'bold'
+          fontSize: '13px', color: '#FFFFFF', fontStyle: 'bold',
+          stroke: '#0a0a2e', strokeThickness: 3,
         }).setDepth(10)
 
         this.speedMultiplier = 1.0

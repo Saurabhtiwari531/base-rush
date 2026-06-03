@@ -1,20 +1,23 @@
 export function createTextures(scene: any) {
   // ── BACKGROUND ────────────────────────────────────────────────
-  // Four-band gradient: deep black-navy at top → slightly lighter navy near ground
+  // Navy→purple vertical gradient with an upper-centre violet glow — matches
+  // the start screen's vibrant cyberpunk palette (deep purple-navy, not flat blue).
   const bg = scene.make.graphics({ x: 0, y: 0, add: false })
-  const colors = [
-    { y: 0,   height: 160, color: 0x000210 },
-    { y: 160, height: 160, color: 0x000722 },
-    { y: 320, height: 160, color: 0x000f2c },
-    { y: 480, height: 160, color: 0x001538 },
-    { y: 640, height: 128, color: 0x001A40 },
-  ]
-  colors.forEach(layer => {
-    bg.fillStyle(layer.color, 1)
-    bg.fillRect(0, layer.y, 480, layer.height)
-  })
+  // Smooth vertical gradient: purple-navy top → near-black bottom
+  bg.fillGradientStyle(0x1a1240, 0x1a1240, 0x06040f, 0x06040f, 1)
+  bg.fillRect(0, 0, 480, 768)
+  // Soft violet radial glow upper-centre — many thin layers = smooth falloff
+  for (let i = 8; i >= 1; i--) {
+    bg.fillStyle(0x4226b0, 0.026)
+    bg.fillCircle(240, 250, 60 + i * 34)
+  }
+  // Faint magenta accent glow lower-right (echoes the pink in "RUSH")
+  for (let i = 5; i >= 1; i--) {
+    bg.fillStyle(0x8a2475, 0.018)
+    bg.fillCircle(430, 580, 90 + i * 34)
+  }
   // Barely-visible horizontal scan grid (depth-of-field feel)
-  bg.lineStyle(0.5, 0x0033AA, 0.06)
+  bg.lineStyle(0.5, 0x5a3acc, 0.05)
   for (let y = 0; y < 768; y += 40) bg.lineBetween(0, y, 480, y)
   bg.generateTexture('bg', 480, 768)
   bg.destroy()
