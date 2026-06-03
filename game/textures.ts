@@ -3,22 +3,53 @@ export function createTextures(scene: any) {
   // Navy→purple vertical gradient with an upper-centre violet glow — matches
   // the start screen's vibrant cyberpunk palette (deep purple-navy, not flat blue).
   const bg = scene.make.graphics({ x: 0, y: 0, add: false })
+  // Everything below is baked once into a single 'bg' texture → 1 draw call at
+  // runtime, so this rich skyline costs LESS than the old procedural stars/glow.
+  const rnd = (a: number, b: number) => a + Math.random() * (b - a)
+  const irnd = (a: number, b: number) => Math.floor(rnd(a, b + 0.999))
+
   // Smooth vertical gradient: purple-navy top → near-black bottom
   bg.fillGradientStyle(0x1a1240, 0x1a1240, 0x06040f, 0x06040f, 1)
   bg.fillRect(0, 0, 480, 768)
-  // Soft violet radial glow upper-centre — many thin layers = smooth falloff
-  for (let i = 8; i >= 1; i--) {
-    bg.fillStyle(0x4226b0, 0.026)
-    bg.fillCircle(240, 250, 60 + i * 34)
+
+  // Soft violet glow high in the sky (smooth multi-layer falloff)
+  for (let i = 9; i >= 1; i--) { bg.fillStyle(0x4226b0, 0.022); bg.fillCircle(240, 170, 60 + i * 32) }
+  // Nebula wisps (soft violet blobs, upper area)
+  for (let i = 0; i < 7; i++) { bg.fillStyle(0x7a3aff, 0.035); bg.fillCircle(rnd(110, 320), rnd(50, 180), rnd(28, 68)) }
+  // Starfield baked into the sky band
+  for (let i = 0; i < 70; i++) {
+    bg.fillStyle(Math.random() < 0.22 ? 0x9a7bff : 0xffffff, rnd(0.12, 0.5))
+    bg.fillCircle(rnd(0, 480), rnd(4, 350), rnd(0.4, 1.3))
   }
-  // Faint magenta accent glow lower-right (echoes the pink in "RUSH")
-  for (let i = 5; i >= 1; i--) {
-    bg.fillStyle(0x8a2475, 0.018)
-    bg.fillCircle(430, 580, 90 + i * 34)
+
+  // ── CITY SKYLINE (side view) — tall towers on the edges, short in the centre
+  // so the play area below stays dark and the running character reads clearly.
+  const neon = [0x3a7bff, 0xff3d9a, 0x22d3ff, 0xb44dff]
+  const horizon = 414
+  let bx = -6
+  while (bx < 486) {
+    const w = irnd(14, 38)
+    const edge = Math.min(1, Math.abs(bx + w / 2 - 240) / 210)   // 0 centre → 1 edges
+    const h = rnd(0.5, 1) * (46 + edge * edge * 250)
+    const topY = horizon - h
+    bg.fillStyle(0x090a26, 0.95); bg.fillRect(bx, topY, w, h)          // dark body
+    bg.fillStyle(neon[irnd(0, 3)], 0.55); bg.fillRect(bx, topY, w, 2)  // neon top edge
+    const wc = neon[irnd(0, 3)]                                        // window colour
+    for (let wy = topY + 6; wy < horizon - 4; wy += 8)
+      for (let wx = bx + 3; wx < bx + w - 3; wx += 6)
+        if (Math.random() < 0.45) { bg.fillStyle(wc, rnd(0.25, 0.65)); bg.fillRect(wx, wy, 2, 3) }
+    bx += w + irnd(1, 7)
   }
-  // Barely-visible horizontal scan grid (depth-of-field feel)
-  bg.lineStyle(0.5, 0x5a3acc, 0.05)
-  for (let y = 0; y < 768; y += 40) bg.lineBetween(0, y, 480, y)
+  // Horizon haze where the skyline meets the dark play area
+  bg.fillStyle(0x6a3acc, 0.10); bg.fillRect(0, horizon - 6, 480, 12)
+  bg.fillStyle(0x2a1a6a, 0.16); bg.fillRect(0, horizon, 480, 44)
+
+  // ── BASE LOGO emblem — small, cute, glowing, like a second moon (top-right) ─
+  const lx = 412, ly = 92
+  for (let i = 6; i >= 1; i--) { bg.fillStyle(0x2e7bff, 0.045); bg.fillCircle(lx, ly, 22 + i * 5) }
+  bg.fillStyle(0x0a52ff, 1); bg.fillCircle(lx, ly, 23)                       // Base-blue disc
+  bg.fillStyle(0xffffff, 1); bg.fillRoundedRect(lx - 11, ly - 4.5, 22, 9, 3) // white bar
+
   bg.generateTexture('bg', 480, 768)
   bg.destroy()
 
