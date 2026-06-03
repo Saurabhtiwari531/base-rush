@@ -68,7 +68,7 @@ export default function Home() {
     address, isConnected, disconnect,
     hash, isPending, isConfirming,
     canReplay, txPending, txError,
-    finalScore, connectors,
+    finalScore, setFinalScore, connectors,
     submitScoreToChain, handlePlayAgain,
     handleRetryTransaction,
     connectWallet,
@@ -167,7 +167,9 @@ export default function Home() {
     ;(window as any).handleGameOver = (score: number, stats?: any) => {
       setIsGameOver(true)
       if (stats) setRunStats(stats)
-      setTimeout(() => { submitScoreToChain(score) }, 100)
+      // Don't auto-prompt the wallet. Just note the score; the Game Over screen
+      // shows the weekly-rewards banner + a Submit button so the player chooses.
+      setFinalScore(score)
     }
     ;(window as any).gameReady = () => { setGameLoading(false) }
     ;(window as any).onCoinsEarned = (n: number) => { if (n > 0) wallet.addCoins(n) }
@@ -176,7 +178,7 @@ export default function Home() {
       delete (window as any).gameReady
       delete (window as any).onCoinsEarned
     }
-  }, [isConnected, submitScoreToChain, wallet])
+  }, [setFinalScore, wallet])
 
   // Push equipped skin tint to window before each game starts (Phaser reads it in create())
   useEffect(() => {

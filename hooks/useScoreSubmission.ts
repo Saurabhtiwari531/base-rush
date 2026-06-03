@@ -195,6 +195,7 @@ export function useScoreSubmission() {
     txPending,
     txError,
     finalScore,
+    setFinalScore,
     connectors,
     submitScoreToChain,
     handlePlayAgain,

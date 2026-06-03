@@ -65,10 +65,14 @@ button { -webkit-tap-highlight-color: transparent; }
      giant BASE RUSH title, so the bar just keeps the functional pills. */
   .tb-brand, .tb-brand-divider { display: none !important; }
   .tb-header { padding: 7px 10px !important; padding-top: calc(7px + env(safe-area-inset-top)) !important; }
-  .tb-pill { font-size: 11px !important; padding: 5px 10px !important; }
-  .tb-wallet { font-size: 10px !important; padding: 4px 8px !important; }
-  .tb-disconnect { font-size: 10px !important; padding: 4px 8px !important; }
+  .tb-pill { font-size: 11px !important; padding: 6px 9px !important; }
+  .tb-wallet { font-size: 10px !important; padding: 5px 8px !important; }
+  .tb-disconnect { font-size: 10px !important; padding: 5px 9px !important; }
   .tb-row { gap: 6px !important; }
+  /* Icon-only buttons on phones — hide the text labels so the whole bar fits
+     (4 items + wallet chip were overflowing inside the Base App webview). */
+  .tb-pill-label, .tb-disconnect-label { display: none !important; }
+  .tb-pill, .tb-disconnect { padding: 6px 11px !important; }
 
   /* Modals: tighter padding so content gets more width */
   .hiw-modal { padding: 18px 14px !important; }

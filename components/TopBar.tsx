@@ -105,6 +105,7 @@ export function TopBar({
               <button
                 onClick={() => setShowHowItWorks(true)}
                 className="tb-pill"
+                title="How It Works"
                 style={{
                   background: 'rgba(0,82,255,0.15)',
                   border: '1px solid rgba(0,82,255,0.4)',
@@ -113,13 +114,14 @@ export function TopBar({
                   letterSpacing: '0.5px', whiteSpace: 'nowrap', flexShrink: 0,
                 }}
               >
-                📖 How It Works
+                📖<span className="tb-pill-label"> How It Works</span>
               </button>
 
               {/* Leaderboard */}
               <button
                 onClick={() => { setShowLeaderboard(!showLeaderboard); if (!showLeaderboard) refetch() }}
                 className="tb-pill"
+                title="Leaderboard"
                 style={{
                   background: 'rgba(255,215,0,0.15)', border: '1px solid #FFD700',
                   color: '#FFD700', padding: '4px 10px', borderRadius: '20px',
@@ -127,7 +129,7 @@ export function TopBar({
                   whiteSpace: 'nowrap', flexShrink: 0,
                 }}
               >
-                🏆 Leaderboard
+                🏆<span className="tb-pill-label"> Leaderboard</span>
               </button>
             </>
           )}
@@ -145,13 +147,13 @@ export function TopBar({
               }}>
                 ✅ {address?.slice(0, 4)}…{address?.slice(-4)}
               </span>
-              <button onClick={() => disconnect()} className="tb-disconnect" style={{
+              <button onClick={() => disconnect()} className="tb-disconnect" title="Disconnect" style={{
                 background: 'transparent', border: '1px solid #FF4444',
                 color: '#FF4444', padding: '4px 10px',
                 borderRadius: '20px', cursor: 'pointer', fontSize: '12px',
                 whiteSpace: 'nowrap',
               }}>
-                Disconnect
+                ⏏<span className="tb-disconnect-label"> Disconnect</span>
               </button>
             </>
           )}
