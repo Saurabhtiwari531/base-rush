@@ -71,7 +71,7 @@ export default function Home() {
     finalScore, setFinalScore, connectors,
     submitScoreToChain, handlePlayAgain,
     handleRetryTransaction,
-    connectWallet,
+    connectWallet, resetSubmission,
   } = useScoreSubmission()
 
   const { best, isNewBest, checkAndUpdate, resetNewBest } = usePersonalBest()
@@ -91,13 +91,16 @@ export default function Home() {
     }
   }, [finalScore, isGameOver])
 
-  // Reset isNewBest + stats when starting a new game
+  // Reset isNewBest + stats + submission state when starting a new game.
+  // resetSubmission() clears the previous tx so the next game over shows the
+  // Submit button again (not a stale "Score Saved!").
   useEffect(() => {
     if (gameStarted) {
       resetNewBest()
       setRunStats(null)
       runFinalizedRef.current = false
       chainAchUnlockedRef.current = false
+      resetSubmission()
     }
   }, [gameStarted])
 

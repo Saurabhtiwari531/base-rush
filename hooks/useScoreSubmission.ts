@@ -64,7 +64,7 @@ export function useScoreSubmission() {
   const connectors = useConnectors()
   const { mutate: disconnectWallet } = useDisconnect()
   const { mutateAsync: switchChainAsync } = useSwitchChain()
-  const { data: hash, mutate: writeContract, isPending, isError } = useWriteContract()
+  const { data: hash, mutate: writeContract, isPending, isError, reset: resetWrite } = useWriteContract()
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash })
 
   const [canReplay, setCanReplay] = useState(false)
@@ -151,6 +151,7 @@ export function useScoreSubmission() {
   ) => {
     if (!canReplay) return
 
+    resetWrite()          // clear the old tx hash so isConfirmed goes false
     setCanReplay(false)
     setTxPending(false)
     setTxError('')
@@ -166,6 +167,18 @@ export function useScoreSubmission() {
 
     setGameStarted(false)
     setTimeout(() => setGameStarted(true), 100)
+  }
+
+  // Clear all submission/tx state for a fresh run. Crucial: without resetWrite()
+  // the old confirmed hash keeps isConfirmed=true, which re-flips canReplay back
+  // on so the NEXT game over wrongly shows "Score Saved!" instead of Submit.
+  const resetSubmission = () => {
+    resetWrite()
+    setCanReplay(false)
+    setTxPending(false)
+    setTxError('')
+    setIsSubmitting(false)
+    setFinalScore(0)
   }
 
   const handleRetryTransaction = () => {
@@ -201,5 +214,6 @@ export function useScoreSubmission() {
     handlePlayAgain,
     handleRetryTransaction,
     connectWallet,
+    resetSubmission,
   }
 }
