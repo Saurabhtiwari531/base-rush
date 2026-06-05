@@ -970,12 +970,12 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           }
         })
 
-        if (this.fxShake && this.speedMultiplier >= 2.5 && Math.random() < (this.isMobile ? 0.01 : 0.03)) {
+        if (this.fxShake && this.speedMultiplier >= 2.5 && Math.random() < (this.isMobile ? 0.01 : 0.03) * fs) {
           this.cameras.main.shake(50, 0.002)
         }
 
         // Speed streaks — horizontal light trails at high speed (high quality only)
-        if (this.fxStreaks && this.speedMultiplier >= 2.0 && Math.random() < 0.03 * (this.speedMultiplier - 1.5)) {
+        if (this.fxStreaks && this.speedMultiplier >= 2.0 && Math.random() < 0.03 * (this.speedMultiplier - 1.5) * fs) {
           const sy = Phaser.Math.Between(80, 710)
           const sw = Phaser.Math.Between(25, 70)
           const alpha = Phaser.Math.FloatBetween(0.15, 0.35)
