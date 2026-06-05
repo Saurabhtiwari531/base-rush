@@ -931,25 +931,30 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
         }
 
         this.stars?.forEach((star: any) => {
-          star.x -= star.speed * this.speedMultiplier
+          star.x -= star.speed * this.speedMultiplier * fs
           if (star.x < -10) star.x = 490
         })
 
         // ── ENVIRONMENT ANIMATIONS ─────────────────────────────────────────
-        // Scroll neon grid floor in sync with obstacle speed
-        if (this.groundGrid) this.groundGrid.tilePositionX += this.obstacleSpeed / 60
+        // Scroll neon grid floor in sync with obstacle speed. The × fs (delta
+        // scale) is CRUCIAL: the obstacles move via physics (velocity × delta),
+        // so the floor must scale by delta too. Otherwise an fps dip during a
+        // jump makes the obstacles surge ahead of the fixed-step floor — which
+        // reads as a phantom forward "speed boost". With × fs they move in
+        // lockstep at any frame rate.
+        if (this.groundGrid) this.groundGrid.tilePositionX += (this.obstacleSpeed / 60) * fs
         // Scroll far parallax circuit layer (8× slower = depth effect)
-        if (this.bgCircuit) this.bgCircuit.tilePositionX += this.obstacleSpeed / (60 * 8)
+        if (this.bgCircuit) this.bgCircuit.tilePositionX += (this.obstacleSpeed / (60 * 8)) * fs
 
         // Parallax skyline — near faster than far → depth (both far slower than floor)
-        if (this.skyNear) this.skyNear.tilePositionX += this.obstacleSpeed / 150
-        if (this.skyFar) this.skyFar.tilePositionX += this.obstacleSpeed / 320
-        if (this.mist) this.mist.tilePositionX += this.obstacleSpeed / 240
+        if (this.skyNear) this.skyNear.tilePositionX += (this.obstacleSpeed / 150) * fs
+        if (this.skyFar) this.skyFar.tilePositionX += (this.obstacleSpeed / 320) * fs
+        if (this.mist) this.mist.tilePositionX += (this.obstacleSpeed / 240) * fs
 
         // Fog: drift left slowly, rise slightly, reset when out of view
         this.fogPool?.forEach((fog: any) => {
-          fog.x -= fog.driftSpd * Math.min(this.speedMultiplier, 2)
-          fog.y -= 0.06
+          fog.x -= fog.driftSpd * Math.min(this.speedMultiplier, 2) * fs
+          fog.y -= 0.06 * fs
           if (fog.x < -120 || fog.y < 706) {
             fog.x = 490 + Phaser.Math.Between(0, 100)
             fog.y = 730 + Phaser.Math.Between(0, 16)
@@ -958,7 +963,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
         // Data-flow dots: race at fixed speed (atmospheric, not gameplay-scaled)
         this.dataFlow?.forEach((dot: any) => {
-          dot.x -= dot.spd
+          dot.x -= dot.spd * fs
           if (dot.x < -10) {
             dot.x = 490 + Phaser.Math.Between(0, 240)
             dot.y = 728 + (Math.random() < 0.5 ? -1 : 2)
