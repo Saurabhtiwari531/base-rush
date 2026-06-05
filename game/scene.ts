@@ -87,23 +87,28 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           this.mist = this.add.tileSprite(240, 420, 480, 64, 'mist').setDepth(0.5).setAlpha(0.7)
         }
         // Distance-zone colour wash (fades in at milestones) — one fullscreen rect
-        this.zoneOverlay = this.add.rectangle(240, 384, 480, 768, 0xff6a00, 0).setDepth(0.72)
+        // ADD blend → the zone wash ADDS coloured light (brightens/tints) instead
+        // of alpha-darkening the scene, so milestones feel energetic, not murky.
+        this.zoneOverlay = this.add.rectangle(240, 384, 480, 768, 0xff6a00, 0).setDepth(0.72).setBlendMode(Phaser.BlendModes.ADD)
         this.lastZone = 0
 
         // Speed-based theme overlays (fade in at 1.2 / 1.5 / 2.0 / 3.0 / 3.5).
         // Start hidden — an alpha-0 fullscreen rect STILL draws on the GPU, so 5
         // of them = 5× wasted fullscreen overdraw every frame. We only flip the
         // active tier visible, keeping at most one fullscreen tint on screen.
+        // ADD blend so each speed tier ADDS a coloured energy wash instead of
+        // alpha-darkening the scene — higher tiers no longer go dark/murky.
+        const ADD = Phaser.BlendModes.ADD
         this.themeOverlays = [
-          this.add.rectangle(240, 384, 480, 768, 0x553300, 0).setDepth(0.75).setVisible(false), // sunset 1.2x
-          this.add.rectangle(240, 384, 480, 768, 0x330066, 0).setDepth(0.75).setVisible(false), // purple 1.5x
-          this.add.rectangle(240, 384, 480, 768, 0x550011, 0).setDepth(0.75).setVisible(false), // crimson 2.0x
-          this.add.rectangle(240, 384, 480, 768, 0x003311, 0).setDepth(0.75).setVisible(false), // toxic green 3.0x
-          this.add.rectangle(240, 384, 480, 768, 0x440099, 0).setDepth(0.75).setVisible(false), // cosmic 3.5x
+          this.add.rectangle(240, 384, 480, 768, 0x6a3a00, 0).setDepth(0.75).setVisible(false).setBlendMode(ADD), // sunset 1.2x
+          this.add.rectangle(240, 384, 480, 768, 0x3a1a8a, 0).setDepth(0.75).setVisible(false).setBlendMode(ADD), // purple 1.5x
+          this.add.rectangle(240, 384, 480, 768, 0x6a0a22, 0).setDepth(0.75).setVisible(false).setBlendMode(ADD), // crimson 2.0x
+          this.add.rectangle(240, 384, 480, 768, 0x0a4a22, 0).setDepth(0.75).setVisible(false).setBlendMode(ADD), // toxic green 3.0x
+          this.add.rectangle(240, 384, 480, 768, 0x4a1ab0, 0).setDepth(0.75).setVisible(false).setBlendMode(ADD), // cosmic 3.5x
         ]
         this.lastTheme = 0
         // Pulsing accent overlay for top-tier speeds — hidden until cosmic tier
-        this.themePulse = this.add.rectangle(240, 384, 480, 768, 0x00CCFF, 0).setDepth(0.76).setVisible(false)
+        this.themePulse = this.add.rectangle(240, 384, 480, 768, 0x00CCFF, 0).setDepth(0.76).setVisible(false).setBlendMode(Phaser.BlendModes.ADD)
 
         // Parallax circuit layer — desktop only. On mobile it's a fullscreen
         // textured layer at alpha 0.07 (near-invisible) for real fillrate cost.

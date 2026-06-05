@@ -8,8 +8,9 @@ export function createTextures(scene: any) {
   const rnd = (a: number, b: number) => a + Math.random() * (b - a)
   const irnd = (a: number, b: number) => Math.floor(rnd(a, b + 0.999))
 
-  // Smooth vertical gradient: purple-navy top → near-black bottom
-  bg.fillGradientStyle(0x1a1240, 0x1a1240, 0x06040f, 0x06040f, 1)
+  // Smooth vertical gradient: purple-navy top → deep navy bottom (NOT pure black,
+  // so the lower play area reads as a dim-lit stage instead of a black void)
+  bg.fillGradientStyle(0x201852, 0x201852, 0x0c0a26, 0x0c0a26, 1)
   bg.fillRect(0, 0, 480, 768)
 
   // Soft violet glow high in the sky (smooth multi-layer falloff)
@@ -24,8 +25,15 @@ export function createTextures(scene: any) {
 
   // Horizon haze where the (scrolling) skyline meets the dark play area
   const horizon = 414
-  bg.fillStyle(0x6a3acc, 0.10); bg.fillRect(0, horizon - 6, 480, 12)
-  bg.fillStyle(0x2a1a6a, 0.16); bg.fillRect(0, horizon, 480, 44)
+  bg.fillStyle(0x6a3acc, 0.12); bg.fillRect(0, horizon - 6, 480, 12)
+  bg.fillStyle(0x2a1a6a, 0.18); bg.fillRect(0, horizon, 480, 44)
+
+  // Play-area ambient — a soft blue stage glow so the action zone (where the
+  // robot, coins & obstacles live) reads as lit, not a black void. Subtle enough
+  // that white/gold/neon gameplay sprites still pop against it.
+  for (let i = 12; i >= 1; i--) { bg.fillStyle(0x16245f, 0.011); bg.fillCircle(240, 600, 120 + i * 30) }
+  // Gentle floor-rising wash so the bottom band isn't dead black
+  bg.fillStyle(0x0e1a4a, 0.18); bg.fillRect(0, 690, 480, 78)
 
   // ── BASE LOGO emblem — small, cute, glowing, like a second moon (top-right) ─
   const lx = 412, ly = 92
@@ -40,34 +48,36 @@ export function createTextures(scene: any) {
   const neon = [0x3a7bff, 0xff3d9a, 0x22d3ff, 0xb44dff]
   // NEAR skyline — taller, brighter (scrolls a bit faster)
   const sn = scene.make.graphics({ x: 0, y: 0, add: false })
-  for (let x = 8; x < 236; ) {
+  // Full screen-width (480) so it shows once with no centre tiling gap/seam;
+  // buildings run nearly edge-to-edge so the scroll wrap is just a street gap.
+  for (let x = 8; x < 472; ) {
     const w = irnd(16, 34), h = rnd(60, 165), ty = 170 - h
-    sn.fillStyle(0x0b0c2e, 1); sn.fillRect(x, ty, w, h)
-    sn.fillStyle(neon[irnd(0, 3)], 0.7); sn.fillRect(x, ty, w, 2)
+    sn.fillStyle(0x12143a, 1); sn.fillRect(x, ty, w, h)
+    sn.fillStyle(neon[irnd(0, 3)], 0.9); sn.fillRect(x, ty, w, 2)
     const wc = neon[irnd(0, 3)]
     for (let wy = ty + 6; wy < 168; wy += 8)
       for (let wx = x + 3; wx < x + w - 3; wx += 6)
-        if (Math.random() < 0.5) { sn.fillStyle(wc, rnd(0.3, 0.7)); sn.fillRect(wx, wy, 2, 3) }
+        if (Math.random() < 0.5) { sn.fillStyle(wc, rnd(0.4, 0.85)); sn.fillRect(wx, wy, 2, 3) }
     x += w + irnd(6, 16)
   }
-  sn.generateTexture('skyNear', 260, 170); sn.destroy()
+  sn.generateTexture('skyNear', 480, 170); sn.destroy()
   // FAR skyline — smaller, fainter (scrolls slowest = deepest)
   const sf = scene.make.graphics({ x: 0, y: 0, add: false })
-  for (let x = 6; x < 200; ) {
+  for (let x = 6; x < 474; ) {
     const w = irnd(12, 26), h = rnd(35, 110), ty = 120 - h
-    sf.fillStyle(0x0a0a24, 0.85); sf.fillRect(x, ty, w, h)
-    sf.fillStyle(neon[irnd(0, 3)], 0.3); sf.fillRect(x, ty, w, 1.5)
+    sf.fillStyle(0x12122e, 0.9); sf.fillRect(x, ty, w, h)
+    sf.fillStyle(neon[irnd(0, 3)], 0.4); sf.fillRect(x, ty, w, 1.5)
     const wc = neon[irnd(0, 3)]
     for (let wy = ty + 5; wy < 118; wy += 9)
       for (let wx = x + 2; wx < x + w - 2; wx += 6)
-        if (Math.random() < 0.3) { sf.fillStyle(wc, rnd(0.12, 0.3)); sf.fillRect(wx, wy, 1.5, 2) }
+        if (Math.random() < 0.3) { sf.fillStyle(wc, rnd(0.18, 0.4)); sf.fillRect(wx, wy, 1.5, 2) }
     x += w + irnd(5, 14)
   }
-  sf.generateTexture('skyFar', 220, 120); sf.destroy()
-  // MIST — faint puffs, sits just above the dark void at the horizon
+  sf.generateTexture('skyFar', 480, 120); sf.destroy()
+  // MIST — faint puffs, sits just above the dark void at the horizon (full width)
   const ms = scene.make.graphics({ x: 0, y: 0, add: false })
-  for (let i = 0; i < 8; i++) { ms.fillStyle(0x5a4a9a, 0.045); ms.fillCircle(rnd(10, 246), rnd(26, 42), rnd(26, 46)) }
-  ms.generateTexture('mist', 256, 64); ms.destroy()
+  for (let i = 0; i < 14; i++) { ms.fillStyle(0x5a4a9a, 0.05); ms.fillCircle(rnd(10, 470), rnd(26, 42), rnd(26, 46)) }
+  ms.generateTexture('mist', 480, 64); ms.destroy()
 
   // ── PHYSICS GROUND (minimal — visual floor is handled by groundGrid tileSprite) ──
   const gfx = scene.make.graphics({ x: 0, y: 0, add: false })
