@@ -16,6 +16,7 @@ import { useSkins, type Skin } from '../hooks/useSkins'
 import { usePerks } from '../hooks/usePerks'
 import { rollReward, getRewardById, type BoxReward } from '../lib/mysteryBox'
 import { createGameConfig } from '../game/scene'
+import { PlayInBaseApp, isInsideBaseApp } from '../components/PlayInBaseApp'
 
 // Coins granted for each successful daily check-in (the daily streak carrot)
 const DAILY_CHECKIN_COINS = 100
@@ -273,6 +274,10 @@ export default function Home() {
   }
 
   if (!mounted) return null
+
+  // Browser gate: plain browsers get the "play in Base App" QR screen.
+  // Base App / mini-app webviews (and localhost or ?dev=1) get the game.
+  if (!isInsideBaseApp()) return <PlayInBaseApp />
 
   return (
     <main style={{ background: '#000810', minHeight: '100dvh', overflow: 'hidden' }}>
