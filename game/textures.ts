@@ -350,6 +350,37 @@ export function createTextures(scene: any) {
   doublePoints.generateTexture('power2x', 40, 40)
   doublePoints.destroy()
 
+  // Rocket power-up — the rare ROCKET RUSH jackpot (white body, Base-blue
+  // nose + porthole, flame tail). Drawn nose-up like a launch.
+  const rocket = scene.make.graphics({ x: 0, y: 0, add: false })
+  // Warm exhaust glow
+  rocket.fillStyle(0xFF8800, 0.12)
+  rocket.fillCircle(20, 20, 26)
+  rocket.fillStyle(0xFFAA00, 0.18)
+  rocket.fillCircle(20, 20, 21)
+  // Flame
+  rocket.fillStyle(0xFF6600)
+  rocket.fillTriangle(14, 30, 26, 30, 20, 40)
+  rocket.fillStyle(0xFFD200)
+  rocket.fillTriangle(16, 30, 24, 30, 20, 36)
+  // Fins
+  rocket.fillStyle(0x0033AA)
+  rocket.fillTriangle(8, 31, 14, 22, 14, 31)
+  rocket.fillTriangle(32, 31, 26, 22, 26, 31)
+  // Body — white capsule
+  rocket.fillStyle(0xFFFFFF)
+  rocket.fillRoundedRect(14, 8, 12, 23, 6)
+  // Nose cone — Base blue
+  rocket.fillStyle(0x0052FF)
+  rocket.fillTriangle(14, 12, 26, 12, 20, 1)
+  // Porthole
+  rocket.fillStyle(0x0052FF)
+  rocket.fillCircle(20, 19, 4)
+  rocket.fillStyle(0x99DDFF)
+  rocket.fillCircle(20, 19, 2.5)
+  rocket.generateTexture('powerRocket', 40, 40)
+  rocket.destroy()
+
   // High obstacle
   const oh = scene.make.graphics({ x: 0, y: 0, add: false })
   oh.fillStyle(0xFFFFFF)

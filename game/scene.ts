@@ -332,7 +332,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: 
         // Pre-warm emoji glyph rasterization. The FIRST time an emoji is drawn to
         // a Canvas it must load+rasterize the colour-emoji font — a multi-ms hitch.
         // Render every gameplay emoji once off-screen so the real use is instant.
-        const warm = this.add.text(-300, -300, '🛡️🧲⏱️💎🎯🔥', { fontSize: '18px' }).setDepth(-1)
+        const warm = this.add.text(-300, -300, '🛡️🧲⏱️💎🎯🔥🚀', { fontSize: '18px' }).setDepth(-1)
         this.time.delayedCall(60, () => warm.destroy())
 
         // Reusable power-up notification text (avoids per-pickup emoji text creation)
@@ -350,6 +350,22 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: 
         this.magnetIcon = null
         this.magnetOuter = null
         this.doubleIcon = null
+
+        // ── ROCKET SCHEDULING — the rare jackpot. Roughly 1 in 3 runs hides a
+        // rocket somewhere past the early game; most runs never see one, which
+        // is exactly what makes finding one feel like an event.
+        this.activeRocket = false
+        this.rocketGraceUntil = 0
+        this.rocketScheduled = Math.random() < 0.35
+        this.rocketTriggerDist = Phaser.Math.Between(1100, 2400)
+        this.rocketPending = false
+        this.rocketSpawned = false
+        // Test hook: ?rocket=1 forces an early rocket (automated checks /
+        // tuning). Worst case if a player finds it: a few extra cosmetic coins.
+        if (new URLSearchParams(window.location.search).get('rocket') === '1') {
+          this.rocketScheduled = true
+          this.rocketTriggerDist = 80
+        }
 
         this.maxLives = 3
         this.lives = 3
@@ -441,6 +457,23 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: 
           delay: 1600,
           callback: () => {
             if (this.isGameOver || this.isCountingDown) return
+            // A pending rocket takes over this whole segment — it gets clean
+            // air, never sharing screen space with an obstacle.
+            if (this.rocketPending) {
+              this.rocketPending = false
+              this.rocketSpawned = true
+              const r = this.powerups.create(530, 700, 'powerRocket')
+              if (r) {
+                r.setDisplaySize(44, 44)
+                r.setDepth(4)
+                r.body.allowGravity = false
+                r.setVelocityX(-this.obstacleSpeed)
+                r.powerType = 'powerRocket'
+                this.tweens.add({ targets: r, y: r.y - 14, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+                this.tweens.add({ targets: r, alpha: 0.65, duration: 350, yoyo: true, repeat: -1 })
+              }
+              return
+            }
             const hasDrones = this.gameTime > 25000
             const roll = Phaser.Math.Between(0, hasDrones ? 4 : 3)
             let segType = 'low'
@@ -485,6 +518,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: 
         // Obstacle hit
         this.physics.add.overlap(this.basey, this.obstacles, (_b: any, obs: any) => {
           if (this.isGameOver) return
+          // Rocket flight + landing grace: untouchable — obstacles simply
+          // pass underneath/through, they aren't consumed.
+          if (this.activeRocket || this.time.now < this.rocketGraceUntil) return
           obs.destroy()
 
           if (this.activeShield) {
@@ -653,6 +689,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: 
           else if (type === 'powerMagnet') this.activateMagnet()
           else if (type === 'powerSlow') this.activateSlowMo()
           else if (type === 'power2x') this.activateDouble()
+          else if (type === 'powerRocket') this.activateRocket()
 
           // Reuse the pre-warmed notification text (no per-pickup emoji rasterize)
           const notif = this.powerNotif
@@ -686,7 +723,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: 
         }
 
         const doJump = () => {
-          if (this.isGameOver || this.isCountingDown) return
+          // No air control during rocket flight (a double-jump with gravity
+          // off would launch Basey off the top of the screen)
+          if (this.isGameOver || this.isCountingDown || this.activeRocket) return
           if (this.basey.body.blocked.down) {
             this.basey.setVelocityY(-650)
             this.jumpCount = 1
@@ -712,7 +751,7 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: 
         }
 
         const doSlide = () => {
-          if (this.isSliding || !this.basey.body.blocked.down || this.isGameOver || this.isCountingDown) return
+          if (this.isSliding || !this.basey.body.blocked.down || this.isGameOver || this.isCountingDown || this.activeRocket) return
           this.isSliding = true
           this.slideLockedY = this.basey.y
           this.basey.setScale(1.4, 0.4)
@@ -729,7 +768,9 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: 
             // Restore full hitbox (centred on 48×60 sprite)
             this.basey.body.setSize(34, 56, false)
             this.basey.body.setOffset(7, 2)
-            this.basey.setY(this.slideLockedY)
+            // Don't yank Basey back to ground level if a rocket collected
+            // mid-slide has taken him airborne in the meantime
+            if (!this.activeRocket && this.slideLockedY !== null) this.basey.setY(this.slideLockedY)
             this.slideLockedY = null
           })
         }
@@ -891,6 +932,11 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: 
         if (distInt !== this.lastDistDisplay) {
           this.lastDistDisplay = distInt
           this.distanceText.setText(distInt + ' m')
+          // Scheduled rocket reached its trigger distance → next obstacle
+          // segment becomes the rocket pickup instead
+          if (this.rocketScheduled && !this.rocketSpawned && distInt >= this.rocketTriggerDist) {
+            this.rocketPending = true
+          }
           // ── ZONE TRANSITIONS — colour washes fade in at distance milestones ──
           const zone = distInt >= 4000 ? 4 : distInt >= 3000 ? 3 : distInt >= 2000 ? 2 : distInt >= 1000 ? 1 : 0
           if (zone !== this.lastZone && this.zoneOverlay) {

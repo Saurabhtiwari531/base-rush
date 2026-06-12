@@ -3,6 +3,7 @@ export function getPowerUpName(type: string): string {
   if (type === 'powerMagnet') return '🧲 MAGNET'
   if (type === 'powerSlow') return '⏱️ SLOW-MO'
   if (type === 'power2x') return '💎 2x POINTS'
+  if (type === 'powerRocket') return '🚀 ROCKET RUSH'
   return 'POWER-UP'
 }
 
@@ -83,6 +84,96 @@ export function createPowerUps(scene: any) {
         scene.slowMoOverlay.destroy()
         scene.slowMoOverlay = null
       }
+    })
+  }
+
+  // ROCKET RUSH — the rare jackpot (scheduled at most once per run by the
+  // scene). Basey blasts above the lane, untouchable, while a sine-wave coin
+  // trail streams through the sky band. The payout is deliberately mostly
+  // COINS (skin money): spectacle without distorting the weekly $ race.
+  scene.activateRocket = () => {
+    if (scene.activeRocket) return
+    scene.activeRocket = true
+    const FLY_MS = 5500
+    const FLY_Y = 330
+
+    scene.cameras.main.flash(200, 255, 170, 0)
+    scene.cameras.main.shake(220, 0.006)
+
+    // Collected mid-slide? Stand up first — flight owns the body from here
+    // (the slide's own restore timer is guarded against rocket flight).
+    scene.isSliding = false
+    scene.basey.setScale(1, 1)
+    scene.basey.body.setSize(34, 56, false)
+    scene.basey.body.setOffset(7, 2)
+
+    // Lift off: gravity off, glide up to the sky band, then a gentle hover bob
+    scene.basey.body.allowGravity = false
+    scene.basey.setVelocity(0, 0)
+    scene.tweens.add({ targets: scene.basey, y: FLY_Y, duration: 650, ease: 'Sine.easeOut' })
+    scene.rocketBob = scene.tweens.add({
+      targets: scene.basey, y: FLY_Y + 16, duration: 800, delay: 700,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    })
+
+    // Exhaust flame — recycled particles streaming back from the feet
+    scene.rocketFlame = scene.time.addEvent({
+      delay: 70, loop: true,
+      callback: () => {
+        const p = scene.particlePool[scene.particleIdx]
+        scene.particleIdx = (scene.particleIdx + 1) % scene.particlePool.length
+        scene.tweens.killTweensOf(p)
+        p.setPosition(scene.basey.x - 6 + Math.random() * 12, scene.basey.y + 30)
+          .setFillStyle(Math.random() < 0.5 ? 0xFF6600 : 0xFFD200, 0.9)
+          .setScale(1).setAlpha(0.9).setVisible(true).setActive(true)
+        scene.tweens.add({
+          targets: p, x: p.x - 40 - Math.random() * 30, y: p.y + 18, alpha: 0,
+          scaleX: 0.2, scaleY: 0.2, duration: 320,
+          onComplete: () => { p.setVisible(false).setActive(false) },
+        })
+      },
+    })
+
+    // Sky coin trail — a slow sine wave at flight height, hoovered up by the bob
+    let phase = 0
+    scene.rocketCoins = scene.time.addEvent({
+      delay: 210, loop: true,
+      callback: () => {
+        if (scene.isGameOver) return
+        const y = FLY_Y + 12 + Math.sin(phase) * 46
+        phase += 0.55
+        const c = scene.coins.create(510, y, 'coin')
+        if (!c) return
+        c.setDisplaySize(28, 28)
+        c.setDepth(4)
+        c.body.allowGravity = false
+        c.setVelocityX(-scene.obstacleSpeed)
+        c.baseY = y
+        c.bobAmp = 0
+        c.phaseShift = 0
+      },
+    })
+
+    makeTimerBar(scene, 27, 0xFF8800, FLY_MS, 'rocketBar')
+
+    // Touch down: glide back, gravity on, then a short blinking grace window
+    // so a low obstacle can't cheap-shot Basey right at the landing spot
+    scene.time.delayedCall(FLY_MS, () => {
+      scene.rocketFlame?.remove(); scene.rocketFlame = null
+      scene.rocketCoins?.remove(); scene.rocketCoins = null
+      scene.rocketBob?.stop(); scene.rocketBob = null
+      scene.tweens.add({
+        targets: scene.basey, y: 683, duration: 550, ease: 'Sine.easeIn',
+        onComplete: () => {
+          scene.basey.body.allowGravity = true
+          scene.activeRocket = false
+          scene.rocketGraceUntil = scene.time.now + 1000
+          scene.tweens.add({
+            targets: scene.basey, alpha: 0.55, duration: 125, yoyo: true, repeat: 3,
+            onComplete: () => scene.basey.setAlpha(1),
+          })
+        },
+      })
     })
   }
 
