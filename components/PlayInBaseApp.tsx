@@ -115,6 +115,44 @@ export function PlayInBaseApp() {
         save scores on-chain, climb the leaderboard and win weekly rewards.
       </p>
 
+      {/* Hype strip — what's waiting inside (real numbers, matches in-game copy) */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, maxWidth: 430 }}>
+        {[
+          {
+            icon: '🏆',
+            title: 'WEEKLY REWARDS',
+            titleColor: '#ffd84d',
+            desc: <>Top 3 win <b style={{ color: '#fff' }}>$5 / $3 / $1</b> — every single week</>,
+          },
+          {
+            icon: '🐉',
+            title: 'UNLOCKABLE SKINS',
+            titleColor: '#ff7ad9',
+            desc: <>🌟 💖 🌌 🐉 🏆 — earn coins in runs, claim legendary looks</>,
+          },
+        ].map((c) => (
+          <div
+            key={c.title}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 9,
+              padding: '9px 14px',
+              borderRadius: 12,
+              background: 'rgba(0,82,255,0.12)',
+              border: '1px solid rgba(0,110,255,0.38)',
+              boxShadow: '0 4px 18px rgba(0,30,120,0.35)',
+            }}
+          >
+            <span style={{ fontSize: 19 }}>{c.icon}</span>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, color: c.titleColor }}>{c.title}</div>
+              <div style={{ fontSize: 11.5, lineHeight: 1.4, color: 'rgba(255,255,255,0.68)' }}>{c.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {isMobile ? (
         <>
           <a
