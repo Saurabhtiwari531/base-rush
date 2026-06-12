@@ -2,7 +2,12 @@ import { createTextures } from './textures'
 import { createAudio } from './audio'
 import { createPowerUps, getPowerUpName } from './powerups'
 
-export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
+// opts.demo → silent attract mode for the browser-gate screen: no audio, no
+// countdown, no window callbacks; an autopilot plays and the scene restarts
+// itself after a crash. Gameplay code is otherwise identical, so the demo
+// always looks exactly like the real game.
+export function createGameConfig(Phaser: any, parent: HTMLElement | null, opts: { demo?: boolean } = {}) {
+  const demo = !!opts.demo
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
   return {
     type: Phaser.AUTO,
@@ -40,13 +45,19 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
     },
     scene: {
       preload: function (this: any) {
-        createTextures(this)
+        // Skip on demo-mode scene.restart(): the keys already exist and
+        // re-generating them would only spam "key in use" warnings.
+        if (!this.textures.exists('coin')) createTextures(this)
       },
 
       create: function (this: any) {
-        ;(window as any).gameReady?.()
+        if (!demo) (window as any).gameReady?.()
 
-        try {
+        if (demo) {
+          // Attract mode is always silent — never create an AudioContext.
+          // Every play*Sound/BGM helper no-ops when audioCtx is null.
+          this.audioCtx = null
+        } else try {
           this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
           // iOS Safari starts AudioContext in suspended state — resume on first tap
           if (this.audioCtx.state === 'suspended') {
@@ -534,6 +545,12 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             this.cameras.main.flash(350, 255, 60, 60)
             this.tweens.add({ targets: this.basey, angle: 360, scaleX: 0, scaleY: 0, alpha: 0, duration: 650 })
             this.stopBGM?.()
+            if (demo) {
+              // Attract mode: no React callbacks — just loop a fresh run
+              // once the explosion has played out.
+              this.time.delayedCall(1400, () => this.scene.restart())
+              return
+            }
             ;(window as any).onCoinsEarned?.(this.coinsCollected)
             if (!this.scoreSubmitted) {
               this.scoreSubmitted = true
@@ -717,20 +734,29 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
           })
         }
 
-        this.input.keyboard?.on('keydown-SPACE', doJump)
-        this.input.keyboard?.on('keydown-UP', doJump)
-        this.input.keyboard?.on('keydown-DOWN', doSlide)
+        if (demo) {
+          // Autopilot drives these from update(); keep keyboard + window
+          // hooks off so the gate screen never hijacks the user's keys.
+          this.doJump = doJump
+          this.doSlide = doSlide
+        } else {
+          this.input.keyboard?.on('keydown-SPACE', doJump)
+          this.input.keyboard?.on('keydown-UP', doJump)
+          this.input.keyboard?.on('keydown-DOWN', doSlide)
 
-        // Touch + mouse input is driven by the React full-screen container
-        // (page.tsx) as a SINGLE source — it fires on press (no wait-for-finger-
-        // lift lag) and also covers the letterbox. One source avoids the old
-        // double-fire (Phaser pointer + React touch) that turned a single tap
-        // into an accidental double jump.
-        ;(window as any).gameJumpInput = doJump
-        ;(window as any).gameSlideInput = doSlide
+          // Touch + mouse input is driven by the React full-screen container
+          // (page.tsx) as a SINGLE source — it fires on press (no wait-for-finger-
+          // lift lag) and also covers the letterbox. One source avoids the old
+          // double-fire (Phaser pointer + React touch) that turned a single tap
+          // into an accidental double jump.
+          ;(window as any).gameJumpInput = doJump
+          ;(window as any).gameSlideInput = doSlide
+        }
 
-        // 3-2-1 GO! countdown — dim backdrop + big number + glow ring
-        const countdownDim = this.add.rectangle(240, 384, 480, 768, 0x000022, 0.55).setDepth(100)
+        // 3-2-1 GO! countdown — dim backdrop + big number + glow ring.
+        // Demo skips straight into the run (a countdown loop looks broken
+        // behind the QR screen).
+        const countdownDim = demo ? null : this.add.rectangle(240, 384, 480, 768, 0x000022, 0.55).setDepth(100)
         const countItems = [
           { text: '3', color: '#FF4444' },
           { text: '2', color: '#FFAA00' },
@@ -771,7 +797,8 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
             }
           })
         }
-        nextCount()
+        if (demo) this.isCountingDown = false
+        else nextCount()
 
         this.runFrame = 0
         this.frameTimer = 0
@@ -793,6 +820,25 @@ export function createGameConfig(Phaser: any, parent: HTMLElement | null) {
 
       update: function (this: any, _t: number, delta: number) {
         if (this.isGameOver || this.isCountingDown) return
+
+        // ── DEMO AUTOPILOT ──────────────────────────────────────────────────
+        // Plays like a decent human: act on the nearest obstacle ahead by
+        // time-to-arrival (so timing stays right as speed ramps) — jump clears
+        // ground obstacles + sweeps the apex coin row, slide ducks drones.
+        if (demo) {
+          let nearest: any = null
+          this.obstacles.getChildren().forEach((o: any) => {
+            if (o.active && o.x > this.basey.x - 10 && (!nearest || o.x < nearest.x)) nearest = o
+          })
+          if (nearest && this.basey.body.blocked.down && !this.isSliding) {
+            const tta = (nearest.x - this.basey.x) / this.obstacleSpeed
+            if (nearest.obsType === 'drone') {
+              if (tta < 0.40) this.doSlide()
+            } else if (tta < 0.42) {
+              this.doJump()
+            }
+          }
+        }
 
         // Frame scale vs a 60fps baseline — keeps score gain & the speed ramp
         // (and therefore the jump-timing difficulty) IDENTICAL on 60 / 90 / 120 /

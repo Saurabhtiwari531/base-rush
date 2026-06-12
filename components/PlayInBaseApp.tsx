@@ -1,8 +1,11 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
+
 // Base Rush is a Base App exclusive: regular browsers see this screen instead
 // of the game, steering players into the Base App (only in-app plays count
-// toward Base's WTU leaderboard).
+// toward Base's WTU leaderboard). A silent autopilot demo of the real game
+// runs dimmed behind the QR/deeplink card as a teaser.
 
 // Deeplink that opens Base Rush inside the Base App (format confirmed from
 // Base's own dashboard QR: base.app/app/ + encoded app URL)
@@ -31,10 +34,30 @@ export function isInsideBaseApp(): boolean {
 
 export function PlayInBaseApp() {
   const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent)
+  const demoRef = useRef<HTMLDivElement>(null)
+
+  // Attract-mode demo: the real game, silent + autopiloted, dimmed behind the
+  // card — shows visitors what they'd get in the Base App.
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return
+    let game: any
+    let cancelled = false
+    ;(async () => {
+      const Phaser = (await import('phaser')).default
+      const { createGameConfig } = await import('../game/scene')
+      if (cancelled || !demoRef.current) return
+      game = new Phaser.Game(createGameConfig(Phaser, demoRef.current, { demo: true }))
+    })()
+    return () => {
+      cancelled = true
+      game?.destroy(true)
+    }
+  }, [])
 
   return (
     <main
       style={{
+        position: 'relative',
         minHeight: '100dvh',
         background: 'radial-gradient(circle at 50% 20%, #0d1b4d 0%, #000810 65%)',
         display: 'flex',
@@ -46,8 +69,35 @@ export function PlayInBaseApp() {
         color: '#fff',
         fontFamily: 'var(--font-display), system-ui, sans-serif',
         textAlign: 'center',
+        overflow: 'hidden',
       }}
     >
+      {/* Live demo canvas (Phaser mounts here) + readability vignette on top */}
+      <div
+        ref={demoRef}
+        aria-hidden
+        style={{ position: 'absolute', inset: 0, opacity: 0.55, pointerEvents: 'none' }}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(circle at 50% 45%, rgba(0,8,16,0.30) 0%, rgba(0,8,16,0.85) 80%)',
+          pointerEvents: 'none',
+        }}
+      />
+      {/* Card content — above the demo canvas + vignette */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 18,
+        }}
+      >
       <img
         src="/icon.png"
         alt="Base Rush"
@@ -104,6 +154,7 @@ export function PlayInBaseApp() {
           </p>
         </>
       )}
+      </div>
     </main>
   )
 }
